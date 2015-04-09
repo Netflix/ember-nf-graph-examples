@@ -1,0 +1,37 @@
+body {
+  font-family: Sans-Serif;
+}
+
+section {
+  border-top: 2px solid #555555;
+  padding: 10px;
+  margin-bottom: 30px;
+}
+
+.low.nf-area path {
+  fill: #0000ff;
+}
+
+.medium.nf-area path {
+  fill: #5555ff;
+}
+
+.high.nf-area path {
+  fill: #9999ff
+}
+
+.nf-bars path {
+  fill: #5555ff;
+}
+
+.bars-with-line .nf-bars path {
+  fill: #9999ff;
+}
+
+.bars-with-line .nf-line.dashed path {
+  stroke: #000000;
+  stroke-width: 2px;
+  stroke-dasharray: 1 2;
+}
+
+@import "coderay";

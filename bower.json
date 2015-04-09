@@ -11,6 +11,9 @@
     "ember-load-initializers": "ember-cli/ember-load-initializers#0.0.2",
     "ember-qunit": "0.3.0",
     "ember-qunit-notifications": "0.0.7",
-    "qunit": "~1.17.1"
+    "qunit": "~1.17.1",
+    "d3": "~3.5.3",
+    "rx-ember": "~0.2.3",
+    "rxjs": "~2.4.6"
   }
 }
