@@ -2,10 +2,9 @@
 
 module.exports = function(environment) {
   var ENV = {
-    modulePrefix: 'nf-graph-recipes',
+    modulePrefix: 'ember-nf-graph-examples',
     environment: environment,
-    baseURL: '/',
-    locationType: 'auto',
+    locationType: 'hash',
     EmberENV: {
       FEATURES: {
         // Here you can enable experimental features on an ember canary build
