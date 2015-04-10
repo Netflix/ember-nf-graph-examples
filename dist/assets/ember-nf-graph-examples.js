@@ -4478,7 +4478,40 @@ define('ember-nf-graph-examples/templates/application', ['exports'], function (e
         var el0 = dom.createDocumentFragment();
         var el1 = dom.createElement("h2");
         dom.setAttribute(el1,"id","title");
-        var el2 = dom.createTextNode("ember-cli-nf-graph examples:");
+        var el2 = dom.createTextNode("ember-cli-nf-graph examples");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("h3");
+        var el2 = dom.createTextNode("GitHub");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("p");
+        var el2 = dom.createElement("a");
+        dom.setAttribute(el2,"href","//github.com/netflix/ember-cli-nf-graph");
+        var el3 = dom.createTextNode("ember-nf-graph");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("p");
+        var el2 = dom.createElement("a");
+        dom.setAttribute(el2,"href","//github.com/netflix/ember-nf-graph-examples");
+        var el3 = dom.createTextNode("ember-nf-graph-examples");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("p");
+        var el2 = dom.createElement("a");
+        dom.setAttribute(el2,"href","//netflix.github.io/ember-cli-nf-graph/docs/");
+        var el3 = dom.createTextNode("Documentation for nf-graph here");
+        dom.appendChild(el2, el3);
         dom.appendChild(el1, el2);
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n\n");
@@ -4769,15 +4802,15 @@ define('ember-nf-graph-examples/templates/application', ['exports'], function (e
         } else {
           fragment = this.build(dom);
         }
-        var morph0 = dom.createMorphAt(dom.childAt(fragment, [4]),3,3);
-        var morph1 = dom.createMorphAt(dom.childAt(fragment, [6]),3,3);
-        var morph2 = dom.createMorphAt(dom.childAt(fragment, [8]),3,3);
-        var morph3 = dom.createMorphAt(dom.childAt(fragment, [10]),3,3);
-        var morph4 = dom.createMorphAt(dom.childAt(fragment, [12]),3,3);
-        var morph5 = dom.createMorphAt(dom.childAt(fragment, [14]),3,3);
-        var morph6 = dom.createMorphAt(dom.childAt(fragment, [16]),3,3);
-        var morph7 = dom.createMorphAt(dom.childAt(fragment, [18]),3,3);
-        var morph8 = dom.createMorphAt(dom.childAt(fragment, [20]),3,3);
+        var morph0 = dom.createMorphAt(dom.childAt(fragment, [12]),3,3);
+        var morph1 = dom.createMorphAt(dom.childAt(fragment, [14]),3,3);
+        var morph2 = dom.createMorphAt(dom.childAt(fragment, [16]),3,3);
+        var morph3 = dom.createMorphAt(dom.childAt(fragment, [18]),3,3);
+        var morph4 = dom.createMorphAt(dom.childAt(fragment, [20]),3,3);
+        var morph5 = dom.createMorphAt(dom.childAt(fragment, [22]),3,3);
+        var morph6 = dom.createMorphAt(dom.childAt(fragment, [24]),3,3);
+        var morph7 = dom.createMorphAt(dom.childAt(fragment, [26]),3,3);
+        var morph8 = dom.createMorphAt(dom.childAt(fragment, [28]),3,3);
         content(env, morph0, context, "basic-line-graph");
         content(env, morph1, context, "basic-area-graph");
         content(env, morph2, context, "basic-bar-graph");
@@ -20383,7 +20416,7 @@ catch(err) {
 if (runningTests) {
   require("ember-nf-graph-examples/tests/test-helper");
 } else {
-  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.0bb4f669"});
+  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.a4a7d93b"});
 }
 
 /* jshint ignore:end */
