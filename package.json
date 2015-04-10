@@ -1,7 +1,7 @@
 {
-  "name": "nf-graph-recipes",
+  "name": "ember-nf-graph-examples",
   "version": "0.0.0",
-  "description": "Small description for nf-graph-recipes goes here",
+  "description": "Examples for how to use ember-cli-nf-graph",
   "private": true,
   "directories": {
     "doc": "doc",
@@ -12,12 +12,12 @@
     "build": "ember build",
     "test": "ember test"
   },
-  "repository": "",
+  "repository": "https://github.com/Netflix/ember-nf-graph-examples",
   "engines": {
     "node": ">= 0.10.0"
   },
-  "author": "",
-  "license": "MIT",
+  "author": "Jeff Butsch <jbutsch@netflix> and contributors",
+  "license": "Apache 2",
   "devDependencies": {
     "broccoli-asset-rev": "^2.0.2",
     "broccoli-sass": "^0.6.4",
