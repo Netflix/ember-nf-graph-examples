@@ -1,5 +1,5 @@
 {
-  "name": "nf-graph-recipes",
+  "name": "ember-nf-graph-examples",
   "dependencies": {
     "jquery": "^1.11.1",
     "ember": "1.11.0",
@@ -15,5 +15,8 @@
     "d3": "~3.5.3",
     "rx-ember": "~0.2.3",
     "rxjs": "~2.4.6"
+  },
+  "resolutions": {
+    "rxjs": "~2.5.1"
   }
 }
