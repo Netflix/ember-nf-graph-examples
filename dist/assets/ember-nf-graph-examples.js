@@ -20663,7 +20663,7 @@ catch(err) {
 if (runningTests) {
   require("ember-nf-graph-examples/tests/test-helper");
 } else {
-  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.e15a11ac"});
+  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.135bdc0f"});
 }
 
 /* jshint ignore:end */
