@@ -201,71 +201,71 @@ define('ember-nf-graph-examples/components/mouse-tracking', ['exports', 'ember',
 });
 define('ember-nf-graph-examples/components/nf-area-stack', ['exports', 'ember'], function (exports, Ember) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend({
-		tagName: "g",
+  exports['default'] = Ember['default'].Component.extend({
+    tagName: "g",
 
-		/**
-	 	Used by `nf-area` to identify an area stack parent
-	 	@property isAreaStack
-	 	@type Boolean
-	 	@default true
-	 	@readonly
-	  */
-		isAreaStack: true,
+    /**
+      Used by `nf-area` to identify an area stack parent
+      @property isAreaStack
+      @type Boolean
+      @default true
+      @readonly
+    */
+    isAreaStack: true,
 
-		/**
-	 	The collection of `nf-area` components under this stack.
-	 	@property areas
-	 	@type Array
-	 	@readonly
-	 */
-		areas: (function () {
-			return [];
-		}).property(),
+    /**
+      The collection of `nf-area` components under this stack.
+      @property areas
+      @type Array
+      @readonly
+    */
+    areas: Ember['default'].computed(function () {
+      return Ember['default'].A();
+    }),
 
-		/**
-	 	Registers an area component with this stack. Also links areas to one
-	 	another by setting `nextArea` on each area component.
-	 	@method registerArea
-	 	@param area {Ember.Component} The area component to register.
-	 */
-		registerArea: function registerArea(area) {
-			var areas = this.get("areas");
-			var prev = areas[areas.length - 1];
+    /**
+      Registers an area component with this stack. Also links areas to one
+      another by setting `nextArea` on each area component.
+      @method registerArea
+      @param area {Ember.Component} The area component to register.
+    */
+    registerArea: function registerArea(area) {
+      var areas = this.get("areas");
+      var prev = areas[areas.length - 1];
 
-			if (prev) {
-				prev.set("nextArea", area);
-				area.set("prevArea", prev);
-			}
+      if (prev) {
+        prev.set("nextArea", area);
+        area.set("prevArea", prev);
+      }
 
-			areas.pushObject(area);
-		},
+      areas.pushObject(area);
+    },
 
-		/**
-	 	Unregisters an area component from this stack. Also updates next
-	 	and previous links.
-	 	@method unregisterArea
-	 	@param area {Ember.Component} the area to unregister
-	 */
-		unregisterArea: function unregisterArea(area) {
-			var prev = area.get("prevArea");
-			var next = area.get("nextArea");
+    /**
+      Unregisters an area component from this stack. Also updates next
+      and previous links.
+      @method unregisterArea
+      @param area {Ember.Component} the area to unregister
+    */
+    unregisterArea: function unregisterArea(area) {
+      var prev = area.get("prevArea");
+      var next = area.get("nextArea");
 
-			if (next) {
-				next.set("prevArea", prev);
-			}
+      if (next) {
+        next.set("prevArea", prev);
+      }
 
-			if (prev) {
-				prev.set("nextArea", next);
-			}
+      if (prev) {
+        prev.set("nextArea", next);
+      }
 
-			this.get("areas").removeObject(area);
-		} });
+      this.get("areas").removeObject(area);
+    } });
 
 });
-define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-selectable-graphic', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-registered-graphic', 'ember-cli-nf-graph/mixins/graph-data-graphic', 'ember-cli-nf-graph/mixins/graph-area-utils', 'ember-cli-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, Selectable, HasGraphParent, RegisteredGraphic, DataGraphic, AreaUtils, GraphicWithTrackingDot, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember-nf-graph/mixins/graph-selectable-graphic', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-registered-graphic', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-area-utils', 'ember-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, Selectable, HasGraphParent, RegisteredGraphic, DataGraphic, AreaUtils, GraphicWithTrackingDot, RequireScaleSource) {
 
   'use strict';
 
@@ -299,20 +299,21 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
     */
     nextArea: null,
 
-    _checkForAreaStackParent: (function () {
+    init: function init() {
+      this._super.apply(this, arguments);
       var stack = this.nearestWithProperty("isAreaStack");
       if (stack) {
         stack.registerArea(this);
         this.set("stack", stack);
       }
-    }).on("init"),
+    },
 
-    _unregister: (function () {
+    _unregister: Ember['default'].on("willDestroyElement", function () {
       var stack = this.get("stack", stack);
       if (stack) {
         stack.unregisterArea(this);
       }
-    }).on("willDestroyElement"),
+    }),
 
     /**
       The computed set of next y values to use for the "bottom" of the graphed area.
@@ -322,20 +323,20 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       @type Array
       @readonly
     */
-    nextYData: (function () {
-      var renderedData = this.get("renderedData");
+    nextYData: Ember['default'].computed("renderedData.length", "nextArea.renderedData.@each", function () {
       var nextData = this.get("nextArea.renderedData") || [];
+      var renderedDataLength = this.get("renderedData.length");
 
       var result = nextData.map(function (next) {
         return next[1];
       });
 
-      while (result.length < renderedData.length) {
+      while (result.length < renderedDataLength) {
         result.push(-99999999);
       }
 
       return result;
-    }).property("renderedData.@each", "nextArea.renderedData.@each"),
+    }),
 
     /**
       The current rendered data "zipped" together with the nextYData.
@@ -343,12 +344,12 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       @type Array
       @readonly
     */
-    areaData: (function () {
+    areaData: Ember['default'].computed("renderedData.@each", "nextYData.@each", function () {
       var nextYData = this.get("nextYData");
       return this.get("renderedData").map(function (r, i) {
         return [r[0], r[1], nextYData[i]];
       });
-    }).property("renderedData.@each", "nextYData.@each"),
+    }),
 
     /**
       Gets the area function to use to create the area SVG path data
@@ -356,12 +357,12 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       @type Function
       @readonly
     */
-    areaFn: (function () {
+    areaFn: Ember['default'].computed("xScale", "yScale", "interpolator", function () {
       var xScale = this.get("xScale");
       var yScale = this.get("yScale");
       var interpolator = this.get("interpolator");
       return this.createAreaFn(xScale, yScale, interpolator);
-    }).property("xScale", "yScale", "interpolator"),
+    }),
 
     /**
       The SVG path data for the area
@@ -369,9 +370,10 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       @type String
       @readonly
     */
-    d: (function () {
-      return this.get("areaFn")(this.get("areaData"));
-    }).property("areaData", "areaFn"),
+    d: Ember['default'].computed("areaData", "areaFn", function () {
+      var areaData = this.get("areaData");
+      return this.get("areaFn")(areaData);
+    }),
 
     click: function click() {
       if (this.get("selectable")) {
@@ -381,369 +383,370 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
   });
 
 });
-define('ember-nf-graph-examples/components/nf-bars-group', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequiresScaleSource) {
+define('ember-nf-graph-examples/components/nf-bars-group', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequiresScaleSource) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], {
-		tagName: "g",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], {
+    tagName: "g",
 
-		isBarsGroup: true,
+    isBarsGroup: true,
 
-		groupPadding: 0.1,
+    groupPadding: 0.1,
 
-		groupOuterPadding: 0,
+    groupOuterPadding: 0,
 
-		// either b-arses or fat, stupid hobbitses
-		barses: (function () {
-			return [];
-		}).property(),
+    // either b-arses or fat, stupid hobbitses
+    barses: Ember['default'].computed(function () {
+      return Ember['default'].A();
+    }),
 
-		registerBars: function registerBars(bars) {
-			var barses = this.get("barses");
-			barses.pushObject(bars);
-			bars.set("group", this);
-			bars.set("groupIndex", barses.length - 1);
-		},
+    registerBars: function registerBars(bars) {
+      var barses = this.get("barses");
+      barses.pushObject(bars);
+      bars.set("group", this);
+      bars.set("groupIndex", barses.length - 1);
+    },
 
-		unregisterBars: function unregisterBars(bars) {
-			if (bars) {
-				bars.set("group", undefined);
-				bars.set("groupIndex", undefined);
-				this.get("barses").removeObject(bars);
-			}
-		},
+    unregisterBars: function unregisterBars(bars) {
+      if (bars) {
+        bars.set("group", undefined);
+        bars.set("groupIndex", undefined);
+        this.get("barses").removeObject(bars);
+      }
+    },
 
-		groupWidth: (function () {
-			var xScale = this.get("xScale");
-			return xScale && xScale.rangeBand ? xScale.rangeBand() : NaN;
-		}).property("xScale"),
+    groupWidth: Ember['default'].computed("xScale", function () {
+      var xScale = this.get("xScale");
+      return xScale && xScale.rangeBand ? xScale.rangeBand() : NaN;
+    }),
 
-		barsDomain: (function () {
-			var len = this.get("barses.length") || 0;
-			return d3.range(len);
-		}).property("barses.[]"),
+    barsDomain: Ember['default'].computed("barses.[]", function () {
+      var len = this.get("barses.length") || 0;
+      return d3.range(len);
+    }),
 
-		barScale: (function () {
-			var barsDomain = this.get("barsDomain");
-			var groupWidth = this.get("groupWidth");
-			var groupPadding = this.get("groupPadding");
-			var groupOuterPadding = this.get("groupOuterPadding");
-			return d3.scale.ordinal().domain(barsDomain).rangeBands([0, groupWidth], groupPadding, groupOuterPadding);
-		}).property("groupWidth", "barsDomain.[]", "groupPadding", "groupOuterPadding"),
+    barScale: Ember['default'].computed("groupWidth", "barsDomain.[]", "groupPadding", "groupOuterPadding", function () {
+      var barsDomain = this.get("barsDomain");
+      var groupWidth = this.get("groupWidth");
+      var groupPadding = this.get("groupPadding");
+      var groupOuterPadding = this.get("groupOuterPadding");
+      return d3.scale.ordinal().domain(barsDomain).rangeBands([0, groupWidth], groupPadding, groupOuterPadding);
+    }),
 
-		barsWidth: function barsWidth() {
-			var scale = this.get("barScale");
-			return scale && scale.rangeBand ? scale.rangeBand() : NaN;
-		} });
-
-});
-define('ember-nf-graph-examples/components/nf-bars', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-data-graphic', 'ember-cli-nf-graph/mixins/graph-registered-graphic', 'ember-cli-nf-graph/utils/parse-property-expression', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-cli-nf-graph/utils/nf/scale-utils', 'ember-cli-nf-graph/utils/nf/svg-dom'], function (exports, Ember, HasGraphParent, DataGraphic, RegisteredGraphic, parsePropExpr, RequireScaleSource, GraphicWithTrackingDot, scale_utils, svg_dom) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RegisteredGraphic['default'], DataGraphic['default'], RequireScaleSource['default'], GraphicWithTrackingDot['default'], {
-		tagName: "g",
-
-		classNames: ["nf-bars"],
-
-		/**
-	 	The name of the property on each data item containing the className for the bar rectangle
-	 	@property classprop
-	 	@type String
-	 	@default 'className'
-	 */
-		classprop: "className",
-
-		/**
-	 	Gets the function to get the classname from each data item.
-	 	@property getBarClass
-	 	@readonly
-	 	@private
-	 */
-		getBarClass: (function () {
-			var classprop = this.get("classprop");
-			return classprop ? parsePropExpr['default'](classprop) : null;
-		}).property("classprop"),
-
-		/**
-	 	The nf-bars-group this belongs to, if any.
-	 	@property group
-	 	@type components.nf-bars-group
-	 	@default null
-	 */
-		group: null,
-
-		/**
-	 	The index of this component within the group, if any.
-	 	@property groupIndex
-	 	@type Number
-	 	@default null
-	 */
-		groupIndex: null,
-
-		/**
-	 	The graph content height
-	 	@property graphHeight
-	 	@type Number
-	 	@readonly
-	 */
-		graphHeight: Ember['default'].computed.oneWay("graph.graphHeight"),
-
-		/**
-	 	A scale provided by nf-bars-group to offset the bar rectangle output
-	 	@property barScale
-	 	@type d3.scale
-	 	@readonly
-	 */
-		barScale: Ember['default'].computed.oneWay("group.barScale"),
-
-		/**
-	 	The width of each bar.
-	 	@property barWidth
-	 	@type Number
-	 	@readonly
-	 */
-		barWidth: (function () {
-			var barScale = this.get("barScale");
-			if (barScale) {
-				return barScale.rangeBand();
-			}
-			var xScale = this.get("xScale");
-			return xScale && xScale.rangeBand ? xScale.rangeBand() : 0;
-		}).property("xScale", "barScale"),
-
-		groupOffsetX: (function () {
-			var barScale = this.get("barScale");
-			var groupIndex = this.get("groupIndex");
-			return scale_utils.normalizeScale(barScale, groupIndex);
-		}).property("barScale", "groupIndex"),
-
-		/**
-	 	The bar models used to render the bars.
-	 	@property bars
-	 	@readonly
-	 */
-		bars: (function () {
-			var xScale = this.get("xScale");
-			var yScale = this.get("yScale");
-			var renderedData = this.get("renderedData");
-			var graphHeight = this.get("graphHeight");
-			var getBarClass = this.get("getBarClass");
-			var groupOffsetX = this.get("groupOffsetX");
-
-			if (!xScale || !yScale || !Ember['default'].isArray(renderedData)) {
-				return null;
-			}
-
-			var w = this.get("barWidth");
-
-			return renderedData.map(function (d) {
-				var barClass = "nf-bars-bar" + getBarClass ? " " + getBarClass(d.data) : "";
-				var x = scale_utils.normalizeScale(xScale, d[0]) + groupOffsetX;
-				var y = scale_utils.normalizeScale(yScale, d[1]);
-				var h = graphHeight - y;
-				return {
-					path: svg_dom.getRectPath(x, y, w, h),
-					className: barClass,
-					data: d };
-			});
-		}).property("xScale", "yScale", "renderedData.[]", "graphHeight", "getBarClass", "barWidth", "groupOffsetX"),
-
-		/**
-	 	The name of the action to fire when a bar is clicked.
-	 	@property barClick
-	 	@type String
-	 	@default null
-	 */
-		barClick: null,
-
-		_registerBars: (function () {
-			var group = this.nearestWithProperty("isBarsGroup");
-			if (group && group.registerBars) {
-				group.registerBars(this);
-			}
-		}).on("init"),
-
-		actions: {
-			nfBarClickBar: function nfBarClickBar(dataPoint) {
-				if (this.get("barClick")) {
-					this.sendAction("barClick", {
-						data: dataPoint.data,
-						x: dataPoint[0],
-						y: dataPoint[1],
-						source: this,
-						graph: this.get("graph") });
-				}
-			}
-		}
-
-	});
+    barsWidth: function barsWidth() {
+      var scale = this.get("barScale");
+      return scale && scale.rangeBand ? scale.rangeBand() : NaN;
+    } });
 
 });
-define('ember-nf-graph-examples/components/nf-brush-selection', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequiresScaleSource) {
+define('ember-nf-graph-examples/components/nf-bars', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-registered-graphic', 'ember-nf-graph/utils/parse-property-expression', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/utils/nf/svg-dom'], function (exports, Ember, HasGraphParent, DataGraphic, RegisteredGraphic, parsePropExpr, RequireScaleSource, GraphicWithTrackingDot, scale_utils, svg_dom) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], {
-		tagName: "g",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RegisteredGraphic['default'], DataGraphic['default'], RequireScaleSource['default'], GraphicWithTrackingDot['default'], {
+    tagName: "g",
 
-		left: undefined,
+    classNames: ["nf-bars"],
 
-		right: undefined,
+    /**
+      The name of the property on each data item containing the className for the bar rectangle
+      @property classprop
+      @type String
+      @default 'className'
+    */
+    classprop: "className",
 
-		formatter: null,
+    /**
+      Gets the function to get the classname from each data item.
+      @property getBarClass
+      @readonly
+      @private
+    */
+    getBarClass: Ember['default'].computed("classprop", function () {
+      var classprop = this.get("classprop");
+      return classprop ? parsePropExpr['default'](classprop) : null;
+    }),
 
-		textPadding: 3,
+    /**
+      The nf-bars-group this belongs to, if any.
+      @property group
+      @type components.nf-bars-group
+      @default null
+    */
+    group: null,
 
-		autoWireUp: true,
+    /**
+      The index of this component within the group, if any.
+      @property groupIndex
+      @type Number
+      @default null
+    */
+    groupIndex: null,
 
-		_autoBrushHandler: function _autoBrushHandler(e) {
-			this.set("left", Ember['default'].get(e, "left.x"));
-			this.set("right", Ember['default'].get(e, "right.x"));
-		},
+    /**
+      The graph content height
+      @property graphHeight
+      @type Number
+      @readonly
+    */
+    graphHeight: Ember['default'].computed.oneWay("graph.graphHeight"),
 
-		_autoBrushEndHandler: function _autoBrushEndHandler(e) {
-			this.set("left", undefined);
-			this.set("right", undefined);
-		},
+    /**
+      A scale provided by nf-bars-group to offset the bar rectangle output
+      @property barScale
+      @type d3.scale
+      @readonly
+    */
+    barScale: Ember['default'].computed.oneWay("group.barScale"),
 
-		_wireToGraph: function _wireToGraph() {
-			var graph = this.get("graph");
-			var auto = this.get("autoWireUp");
+    /**
+      The width of each bar.
+      @property barWidth
+      @type Number
+      @readonly
+    */
+    barWidth: Ember['default'].computed("xScale", "barScale", function () {
+      var barScale = this.get("barScale");
+      if (barScale) {
+        return barScale.rangeBand();
+      }
+      var xScale = this.get("xScale");
+      return xScale && xScale.rangeBand ? xScale.rangeBand() : 0;
+    }),
 
-			if (auto) {
-				graph.on("didBrushStart", this, this._autoBrushHandler);
-				graph.on("didBrush", this, this._autoBrushHandler);
-				graph.on("didBrushEnd", this, this._autoBrushEndHandler);
-			} else {
-				graph.off("didBrushStart", this, this._autoBrushHandler);
-				graph.off("didBrush", this, this._autoBrushHandler);
-				graph.off("didBrushEnd", this, this._autoBrushEndHandler);
-			}
-		},
+    groupOffsetX: Ember['default'].computed("barScale", "groupIndex", function () {
+      var barScale = this.get("barScale");
+      var groupIndex = this.get("groupIndex");
+      return scale_utils.normalizeScale(barScale, groupIndex);
+    }),
 
-		_autoWireUpChanged: (function () {
-			Ember['default'].run.once(this, this._wireToGraph);
-		}).observes("autoWireUp").on("didInsertElement"),
+    /**
+      The bar models used to render the bars.
+      @property bars
+      @readonly
+    */
+    bars: Ember['default'].computed("xScale", "yScale", "renderedData.[]", "graphHeight", "getBarClass", "barWidth", "groupOffsetX", function () {
+      var xScale = this.get("xScale");
+      var yScale = this.get("yScale");
+      var renderedData = this.get("renderedData");
+      var graphHeight = this.get("graphHeight");
+      var getBarClass = this.get("getBarClass");
+      var groupOffsetX = this.get("groupOffsetX");
 
-		_updateLeftText: function _updateLeftText() {
-			var root = d3.select(this.element);
-			var g = root.select(".nf-brush-selection-left-display");
-			var text = g.select(".nf-brush-selection-left-text");
-			var bg = g.select(".nf-brush-selection-left-text-bg");
+      if (!xScale || !yScale || !Ember['default'].isArray(renderedData)) {
+        return null;
+      }
 
-			var display = this.get("leftDisplay");
+      var w = this.get("barWidth");
 
-			if (!display) {
-				g.attr("hidden", true);
-			} else {
-				g.attr("hidden", null);
-			}
+      return Ember['default'].A(renderedData.map(function (d) {
+        var barClass = "nf-bars-bar" + getBarClass ? " " + getBarClass(d.data) : "";
+        var x = scale_utils.normalizeScale(xScale, d[0]) + groupOffsetX;
+        var y = scale_utils.normalizeScale(yScale, d[1]);
+        var h = graphHeight - y;
+        return {
+          path: svg_dom.getRectPath(x, y, w, h),
+          className: barClass,
+          data: d };
+      }));
+    }),
 
-			text.text(display);
+    /**
+      The name of the action to fire when a bar is clicked.
+      @property barClick
+      @type String
+      @default null
+    */
+    barClick: null,
 
-			var textPadding = this.get("textPadding");
-			var leftX = this.get("leftX");
-			var graphHeight = this.get("graphHeight");
-			var bbox = text[0][0].getBBox();
+    init: function init() {
+      this._super.apply(this, arguments);
+      var group = this.nearestWithProperty("isBarsGroup");
+      if (group && group.registerBars) {
+        group.registerBars(this);
+      }
+    },
 
-			var doublePad = textPadding * 2;
-			var width = bbox.width + doublePad;
-			var height = bbox.height + doublePad;
-			var x = Math.max(0, leftX - width);
-			var y = graphHeight - height;
+    actions: {
+      nfBarClickBar: function nfBarClickBar(dataPoint) {
+        if (this.get("barClick")) {
+          this.sendAction("barClick", {
+            data: dataPoint.data,
+            x: dataPoint[0],
+            y: dataPoint[1],
+            source: this,
+            graph: this.get("graph") });
+        }
+      }
+    }
 
-			g.attr("transform", "translate(%@, %@)".fmt(x, y));
-
-			text.attr("x", textPadding).attr("y", textPadding);
-
-			bg.attr("width", width).attr("height", height);
-		},
-
-		_onLeftChange: (function () {
-			Ember['default'].run.once(this, this._updateLeftText);
-		}).observes("left", "graphHeight", "textPadding").on("didInsertElement"),
-
-		_updateRightText: function _updateRightText() {
-			var root = d3.select(this.element);
-			var g = root.select(".nf-brush-selection-right-display");
-			var text = g.select(".nf-brush-selection-right-text");
-			var bg = g.select(".nf-brush-selection-right-text-bg");
-
-			var display = this.get("rightDisplay");
-
-			if (!display) {
-				g.attr("hidden", true);
-			} else {
-				g.attr("hidden", null);
-			}
-
-			text.text(display);
-
-			var textPadding = this.get("textPadding");
-			var rightX = this.get("rightX");
-			var graphHeight = this.get("graphHeight");
-			var graphWidth = this.get("graphWidth");
-			var bbox = text[0][0].getBBox();
-
-			var doublePad = textPadding * 2;
-			var width = bbox.width + doublePad;
-			var height = bbox.height + doublePad;
-			var x = Math.min(graphWidth - width, rightX);
-			var y = graphHeight - height;
-
-			g.attr("transform", "translate(%@, %@)".fmt(x, y));
-
-			text.attr("x", textPadding).attr("y", textPadding);
-
-			bg.attr("width", width).attr("height", height);
-		},
-
-		_onRightChange: (function () {
-			Ember['default'].run.once(this, this._updateRightText);
-		}).observes("right", "graphHeight", "graphWidth", "textPadding").on("didInsertElement"),
-
-		leftDisplay: (function () {
-			var formatter = this.get("formatter");
-			var left = this.get("left");
-			return formatter ? formatter(left) : left;
-		}).property("left", "formatter"),
-
-		rightDisplay: (function () {
-			var formatter = this.get("formatter");
-			var right = this.get("right");
-			return formatter ? formatter(right) : right;
-		}).property("right", "formatter"),
-
-		isVisible: (function () {
-			var left = +this.get("left");
-			var right = +this.get("right");
-			return left === left && right === right;
-		}).property("left", "right"),
-
-		leftX: (function () {
-			var left = this.get("left") || 0;
-			var scale = this.get("xScale");
-			return scale ? scale(left) : 0;
-		}).property("xScale", "left"),
-
-		rightX: (function () {
-			var right = this.get("right") || 0;
-			var scale = this.get("xScale");
-			return scale ? scale(right) : 0;
-		}).property("xScale", "right"),
-
-		graphWidth: Ember['default'].computed.alias("graph.graphWidth"),
-
-		graphHeight: Ember['default'].computed.alias("graph.graphHeight"),
-
-		rightWidth: (function () {
-			return this.get("graphWidth") - this.get("rightX") || 0;
-		}).property("rightX", "graphWidth") });
+  });
 
 });
-define('ember-nf-graph-examples/components/nf-crosshair', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent'], function (exports, Ember, HasGraphParent) {
+define('ember-nf-graph-examples/components/nf-brush-selection', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequiresScaleSource) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], {
+    tagName: "g",
+
+    left: undefined,
+
+    right: undefined,
+
+    formatter: null,
+
+    textPadding: 3,
+
+    autoWireUp: true,
+
+    _autoBrushHandler: function _autoBrushHandler(e) {
+      this.set("left", Ember['default'].get(e, "left.x"));
+      this.set("right", Ember['default'].get(e, "right.x"));
+    },
+
+    _autoBrushEndHandler: function _autoBrushEndHandler(e) {
+      this.set("left", undefined);
+      this.set("right", undefined);
+    },
+
+    _wireToGraph: function _wireToGraph() {
+      var graph = this.get("graph");
+      var auto = this.get("autoWireUp");
+
+      if (auto) {
+        graph.on("didBrushStart", this, this._autoBrushHandler);
+        graph.on("didBrush", this, this._autoBrushHandler);
+        graph.on("didBrushEnd", this, this._autoBrushEndHandler);
+      } else {
+        graph.off("didBrushStart", this, this._autoBrushHandler);
+        graph.off("didBrush", this, this._autoBrushHandler);
+        graph.off("didBrushEnd", this, this._autoBrushEndHandler);
+      }
+    },
+
+    _autoWireUpChanged: Ember['default'].on("didInsertElement", Ember['default'].observer("autoWireUp", function () {
+      Ember['default'].run.once(this, this._wireToGraph);
+    })),
+
+    _updateLeftText: function _updateLeftText() {
+      var root = d3.select(this.element);
+      var g = root.select(".nf-brush-selection-left-display");
+      var text = g.select(".nf-brush-selection-left-text");
+      var bg = g.select(".nf-brush-selection-left-text-bg");
+
+      var display = this.get("leftDisplay");
+
+      if (!display) {
+        g.attr("hidden", true);
+      } else {
+        g.attr("hidden", null);
+      }
+
+      text.text(display);
+
+      var textPadding = this.get("textPadding");
+      var leftX = this.get("leftX");
+      var graphHeight = this.get("graphHeight");
+      var bbox = text[0][0].getBBox();
+
+      var doublePad = textPadding * 2;
+      var width = bbox.width + doublePad;
+      var height = bbox.height + doublePad;
+      var x = Math.max(0, leftX - width);
+      var y = graphHeight - height;
+
+      g.attr("transform", "translate(" + x + " " + y + ")");
+
+      text.attr("x", textPadding).attr("y", textPadding);
+
+      bg.attr("width", width).attr("height", height);
+    },
+
+    _onLeftChange: Ember['default'].on("didInsertElement", Ember['default'].observer("left", "graphHeight", "textPadding", function () {
+      Ember['default'].run.once(this, this._updateLeftText);
+    })),
+
+    _updateRightText: function _updateRightText() {
+      var root = d3.select(this.element);
+      var g = root.select(".nf-brush-selection-right-display");
+      var text = g.select(".nf-brush-selection-right-text");
+      var bg = g.select(".nf-brush-selection-right-text-bg");
+
+      var display = this.get("rightDisplay");
+
+      if (!display) {
+        g.attr("hidden", true);
+      } else {
+        g.attr("hidden", null);
+      }
+
+      text.text(display);
+
+      var textPadding = this.get("textPadding");
+      var rightX = this.get("rightX");
+      var graphHeight = this.get("graphHeight");
+      var graphWidth = this.get("graphWidth");
+      var bbox = text[0][0].getBBox();
+
+      var doublePad = textPadding * 2;
+      var width = bbox.width + doublePad;
+      var height = bbox.height + doublePad;
+      var x = Math.min(graphWidth - width, rightX);
+      var y = graphHeight - height;
+
+      g.attr("transform", "translate(" + x + " " + y + ")");
+
+      text.attr("x", textPadding).attr("y", textPadding);
+
+      bg.attr("width", width).attr("height", height);
+    },
+
+    _onRightChange: Ember['default'].on("didInsertElement", Ember['default'].observer("right", "graphHeight", "graphWidth", "textPadding", function () {
+      Ember['default'].run.once(this, this._updateRightText);
+    })),
+
+    leftDisplay: Ember['default'].computed("left", "formatter", function () {
+      var formatter = this.get("formatter");
+      var left = this.get("left");
+      return formatter ? formatter(left) : left;
+    }),
+
+    rightDisplay: Ember['default'].computed("right", "formatter", function () {
+      var formatter = this.get("formatter");
+      var right = this.get("right");
+      return formatter ? formatter(right) : right;
+    }),
+
+    isVisible: Ember['default'].computed("left", "right", function () {
+      var left = +this.get("left");
+      var right = +this.get("right");
+      return left === left && right === right;
+    }),
+
+    leftX: Ember['default'].computed("xScale", "left", function () {
+      var left = this.get("left") || 0;
+      var scale = this.get("xScale");
+      return scale ? scale(left) : 0;
+    }),
+
+    rightX: Ember['default'].computed("xScale", "right", function () {
+      var right = this.get("right") || 0;
+      var scale = this.get("xScale");
+      return scale ? scale(right) : 0;
+    }),
+
+    graphWidth: Ember['default'].computed.alias("graph.graphWidth"),
+
+    graphHeight: Ember['default'].computed.alias("graph.graphHeight"),
+
+    rightWidth: Ember['default'].computed("rightX", "graphWidth", function () {
+      return this.get("graphWidth") - this.get("rightX") || 0;
+    }) });
+
+});
+define('ember-nf-graph-examples/components/nf-crosshair', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent'], function (exports, Ember, HasGraphParent) {
 
   'use strict';
 
@@ -802,110 +805,110 @@ define('ember-nf-graph-examples/components/nf-crosshair', ['exports', 'ember', '
       this.set("isVisible", false);
     },
 
-    _setupBindings: (function () {
+    _setupBindings: Ember['default'].observer("graph.content", function () {
       var content = this.get("graph.content");
       if (content) {
         content.on("didHoverChange", this, this.didContentHoverChange);
         content.on("didHoverEnd", this, this.didContentHoverEnd);
       }
-    }).observes("graph.content") });
+    }) });
 
 });
-define('ember-nf-graph-examples/components/nf-dot', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-dot', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "circle",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "circle",
 
-		attributeBindings: ["r", "cy", "cx"],
+    attributeBindings: ["r", "cy", "cx"],
 
-		/**
-	 	The x domain value at which to plot the circle
-	 	@property x
-	 	@type Number
-	 	@default null
-	 */
-		x: null,
+    /**
+      The x domain value at which to plot the circle
+      @property x
+      @type Number
+      @default null
+    */
+    x: null,
 
-		/**
-	 	The y domain value at which to plot the circle
-	 	@property x
-	 	@type Number
-	 	@default null
-	 */
-		y: null,
+    /**
+      The y domain value at which to plot the circle
+      @property x
+      @type Number
+      @default null
+    */
+    y: null,
 
-		/**
-	 	The radius of the circle plotted
-	 	@property r
-	 	@type Number
-	 	@default 2.5
-	 */
-		r: 2.5,
+    /**
+      The radius of the circle plotted
+      @property r
+      @type Number
+      @default 2.5
+    */
+    r: 2.5,
 
-		hasX: Ember['default'].computed.notEmpty("x"),
+    hasX: Ember['default'].computed.notEmpty("x"),
 
-		hasY: Ember['default'].computed.notEmpty("y"),
+    hasY: Ember['default'].computed.notEmpty("y"),
 
-		/**
-	 	The computed center x coordinate of the circle
-	 	@property cx
-	 	@type Number
-	 	@private
-	 	@readonly
-	 */
-		cx: (function () {
-			var x = this.get("x");
-			var xScale = this.get("xScale");
-			var hasX = this.get("hasX");
-			return hasX && xScale ? xScale(x) : -1;
-		}).property("x", "xScale", "hasX"),
+    /**
+      The computed center x coordinate of the circle
+      @property cx
+      @type Number
+      @private
+      @readonly
+    */
+    cx: Ember['default'].computed("x", "xScale", "hasX", function () {
+      var x = this.get("x");
+      var xScale = this.get("xScale");
+      var hasX = this.get("hasX");
+      return hasX && xScale ? xScale(x) : -1;
+    }),
 
-		/**
-	 	The computed center y coordinate of the circle
-	 	@property cy
-	 	@type Number
-	 	@private
-	 	@readonly
-	 */
-		cy: (function () {
-			var y = this.get("y");
-			var yScale = this.get("yScale");
-			var hasY = this.get("hasY");
-			return hasY && yScale ? yScale(y) : -1;
-		}).property("y", "yScale", "hasY"),
+    /**
+      The computed center y coordinate of the circle
+      @property cy
+      @type Number
+      @private
+      @readonly
+    */
+    cy: Ember['default'].computed("y", "yScale", "hasY", function () {
+      var y = this.get("y");
+      var yScale = this.get("yScale");
+      var hasY = this.get("hasY");
+      return hasY && yScale ? yScale(y) : -1;
+    }),
 
-		/**
-	 	Toggles the visibility of the dot. If x or y are
-	 	not numbers, will return false.
-	 	@property isVisible
-	 	@private
-	 	@readonly
-	 */
-		isVisible: Ember['default'].computed.and("hasX", "hasY") });
-
-});
-define('ember-nf-graph-examples/components/nf-gg', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequireScaleSource, SelectableGraphic) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], SelectableGraphic['default'], {
-		tagName: "g",
-
-		classNameBindings: [":nf-gg", "selectable", "selected"],
-
-		isScaleSource: true,
-
-		click: function click() {
-			if (this.get("selectable")) {
-				this.toggleProperty("selected");
-			}
-		}
-	});
+    /**
+      Toggles the visibility of the dot. If x or y are
+      not numbers, will return false.
+      @property isVisible
+      @private
+      @readonly
+    */
+    isVisible: Ember['default'].computed.and("hasX", "hasY") });
 
 });
-define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/utils/nf/graph-mouse-event'], function (exports, Ember, HasGraphParent, GraphMouseEvent) {
+define('ember-nf-graph-examples/components/nf-gg', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequireScaleSource, SelectableGraphic) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], SelectableGraphic['default'], {
+    tagName: "g",
+
+    classNameBindings: [":nf-gg", "selectable", "selected"],
+
+    isScaleSource: true,
+
+    click: function click() {
+      if (this.get("selectable")) {
+        this.toggleProperty("selected");
+      }
+    }
+  });
+
+});
+define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/utils/nf/graph-mouse-event'], function (exports, Ember, HasGraphParent, GraphMouseEvent) {
 
   'use strict';
 
@@ -916,10 +919,10 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
 
     attributeBindings: ["transform", "clip-path"],
 
-    "clip-path": (function () {
+    "clip-path": Ember['default'].computed("graph.contentClipPathId", function () {
       var clipPathId = this.get("graph.contentClipPathId");
-      return "url('#%@')".fmt(clipPathId);
-    }).property("graph.contentClipPathId"),
+      return "url('#" + clipPathId + "')";
+    }),
 
     /**
       The SVG transform for positioning the graph content
@@ -927,9 +930,11 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
       @type String
       @readonly
     */
-    transform: (function () {
-      return "translate(%@ %@)".fmt(this.get("x"), this.get("y"));
-    }).property("x", "y"),
+    transform: Ember['default'].computed("x", "y", function () {
+      var x = this.get("x");
+      var y = this.get("y");
+      return "translate(" + x + " " + y + ")";
+    }),
 
     /**
       The x position of the graph content
@@ -969,7 +974,7 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
       @type Array
       @readonly
     */
-    gridLanes: (function () {
+    gridLanes: Ember['default'].computed("graph.yAxis.ticks", "width", "height", function () {
       var ticks = this.get("graph.yAxis.ticks");
       var width = this.get("width");
       var height = this.get("height");
@@ -999,8 +1004,8 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
         return lanes;
       }, []);
 
-      return lanes;
-    }).property("graph.yAxis.ticks", "width", "height"),
+      return Ember['default'].A(lanes);
+    }),
 
     /**
       The name of the hoverChange action to fire
@@ -1014,7 +1019,7 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
       var context = GraphMouseEvent['default'].create({
         originalEvent: e,
         source: this,
-        graph: this.get("graph") });
+        graphContentElement: this.element });
 
       this.trigger("didHoverChange", context);
 
@@ -1035,7 +1040,8 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
       var context = GraphMouseEvent['default'].create({
         originalEvent: e,
         source: this,
-        graph: this.get("graph") });
+        graphContentElement: this.element
+      });
       this.trigger("didHoverEnd", context);
 
       if (this.get("hoverEnd")) {
@@ -1051,12 +1057,13 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
     */
     frets: Ember['default'].computed.alias("graph.xAxis.ticks"),
 
-    hasGraph: function hasGraph(graph) {
-      graph.set("content", this);
+    init: function init() {
+      this._super.apply(this, arguments);
+      this.set("graph.content", this);
     } });
 
 });
-define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'ember-cli-nf-graph/utils/nf/graph-position', 'ember-cli-nf-graph/utils/nf/svg-dom', 'ember-cli-nf-graph/utils/nf/array-helpers'], function (exports, Ember, GraphPosition, svg_dom, array_helpers) {
+define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'ember-nf-graph/utils/nf/graph-position', 'ember-nf-graph/utils/nf/svg-dom', 'ember-nf-graph/utils/nf/array-helpers'], function (exports, Ember, GraphPosition, svg_dom, array_helpers) {
 
   'use strict';
 
@@ -1068,7 +1075,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var scaleTypeKey = axis + "ScaleType";
     var powExponentKey = axis + "PowerExponent";
 
-    return (function () {
+    return Ember['default'].computed(scaleTypeKey, powExponentKey, function () {
       var type = this.get(scaleTypeKey);
       var powExp = this.get(powExponentKey);
 
@@ -1088,7 +1095,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
         Ember['default'].warn("unknown scale type: " + type);
         return d3.scale.linear;
       }
-    }).property(scaleTypeKey, powExponentKey);
+    });
   };
 
   var domainProperty = function domainProperty(axis) {
@@ -1098,9 +1105,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var scaleTypeKey = axis + "ScaleType";
     var logMinKey = axis + "LogMin";
 
-    console.debug(dataKey + ".@each", minKey, maxKey, scaleTypeKey, logMinKey);
-
-    return (function () {
+    return Ember['default'].computed(dataKey + ".@each", minKey, maxKey, scaleTypeKey, logMinKey, function () {
       var data = this.get(dataKey);
       var min = this.get(minKey);
       var max = this.get(maxKey);
@@ -1126,7 +1131,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       }
 
       return domain;
-    }).property(dataKey + ".@each", minKey, maxKey, scaleTypeKey, logMinKey);
+    });
   };
 
   var scaleProperty = function scaleProperty(axis) {
@@ -1137,7 +1142,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var ordinalPaddingKey = axis + "OrdinalPadding";
     var ordinalOuterPaddingKey = axis + "OrdinalOuterPadding";
 
-    return (function () {
+    return Ember['default'].computed(scaleFactoryKey, rangeKey, scaleTypeKey, ordinalPaddingKey, domainKey, ordinalOuterPaddingKey, function () {
       var scaleFactory = this.get(scaleFactoryKey);
       var range = this.get(rangeKey);
       var domain = this.get(domainKey);
@@ -1154,7 +1159,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       }
 
       return scale;
-    }).property(scaleFactoryKey, rangeKey, scaleTypeKey, ordinalPaddingKey, domainKey, ordinalOuterPaddingKey);
+    });
   };
 
   var minProperty = function minProperty(axis, defaultTickCount) {
@@ -1165,7 +1170,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var __Min_ = "_" + axis + "Min";
     var _prop_ = axis + "Min";
 
-    return (function (key, value) {
+    return Ember['default'].computed(_MinMode_, _DataExtent_, _Axis_tickCount_, _ScaleFactory_, function (key, value) {
       var mode = this.get(_MinMode_);
       var ext;
 
@@ -1196,7 +1201,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       }
 
       return this[__Min_];
-    }).property(_MinMode_, _DataExtent_, _Axis_tickCount_, _ScaleFactory_);
+    });
   };
 
   var maxProperty = function maxProperty(axis, defaultTickCount) {
@@ -1207,7 +1212,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var __Max_ = "_" + axis + "Max";
     var _prop_ = axis + "Max";
 
-    return (function (key, value) {
+    return Ember['default'].computed(_MaxMode_, _DataExtent_, _ScaleFactory_, _Axis_tickCount_, function (key, value) {
       var mode = this.get(_MaxMode_);
       var ext;
 
@@ -1238,7 +1243,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       }
 
       return this[__Max_];
-    }).property(_MaxMode_, _DataExtent_, _ScaleFactory_, _Axis_tickCount_);
+    });
   };
 
   /**
@@ -1531,9 +1536,9 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     xMax: maxProperty("x", 8),
 
     /**
-      Gets or sets the maximum y domain value to display on the graph.
-      Behavior depends on `yMaxMode`.
-      @property yMax
+      Gets or sets the minimum y domain value to display on the graph.
+      Behavior depends on `yMinMode`.
+      @property yMin
     */
     yMin: minProperty("y", 5),
 
@@ -1612,10 +1617,10 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
     */
-    xDataExtent: (function () {
+    xDataExtent: Ember['default'].computed("xData", function () {
       var xData = this.get("xData");
       return xData ? d3.extent(xData) : [null, null];
-    }).property("xData"),
+    }),
 
     /**
       Gets the highest and lowest y values of the graphed data in a two element array.
@@ -1623,10 +1628,10 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
     */
-    yDataExtent: (function () {
+    yDataExtent: Ember['default'].computed("yData", function () {
       var yData = this.get("yData");
       return yData ? d3.extent(yData) : [null, null];
-    }).property("yData"),
+    }),
 
     /**
       Gets all x data from all graphics.
@@ -1634,14 +1639,14 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
     */
-    xData: (function () {
+    xData: Ember['default'].computed("graphics.@each.xData", function () {
       var graphics = this.get("graphics");
       var all = [];
       graphics.forEach(function (graphic) {
         all = all.concat(graphic.get("xData"));
       });
-      return all;
-    }).property("graphics.@each.xData"),
+      return Ember['default'].A(all);
+    }),
 
     /**
       Gets all y data from all graphics
@@ -1649,14 +1654,14 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
     */
-    yData: (function () {
+    yData: Ember['default'].computed("graphics.@each.yData", function () {
       var graphics = this.get("graphics");
       var all = [];
       graphics.forEach(function (graphic) {
         all = all.concat(graphic.get("yData"));
       });
-      return all;
-    }).property("graphics.@each.yData"),
+      return Ember['default'].A(all);
+    }),
 
     /**
       Gets the DOM id for the content clipPath element.
@@ -1665,9 +1670,9 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @readonly
       @private
     */
-    contentClipPathId: (function () {
+    contentClipPathId: Ember['default'].computed("elementId", function () {
       return this.get("elementId") + "-content-mask";
-    }).property("elementId"),
+    }),
 
     /**
       Registry of contained graphic elements such as `nf-line` or `nf-area` components.
@@ -1676,7 +1681,9 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
      */
-    graphics: null,
+    graphics: Ember['default'].computed(function () {
+      return Ember['default'].A();
+    }),
 
     /**
       An array of "selectable" graphics that have been selected within this graph.
@@ -1775,9 +1782,9 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
      */
-    yRange: (function () {
+    yRange: Ember['default'].computed("graphHeight", function () {
       return [this.get("graphHeight"), 0];
-    }).property("graphHeight"),
+    }),
 
     /**
       The x range of the graph in pixels. The min and max pixel values
@@ -1786,9 +1793,9 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
      */
-    xRange: (function () {
+    xRange: Ember['default'].computed("graphWidth", function () {
       return [0, this.get("graphWidth")];
-    }).property("graphWidth"),
+    }),
 
     /**
       Returns `true` if the graph has data to render. Data is conveyed
@@ -1806,7 +1813,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Number
       @readonly
      */
-    graphX: (function () {
+    graphX: Ember['default'].computed("paddingLeft", "yAxis.width", "yAxis.orient", function () {
       var paddingLeft = this.get("paddingLeft");
       var yAxisWidth = this.get("yAxis.width") || 0;
       var yAxisOrient = this.get("yAxis.orient");
@@ -1814,7 +1821,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
         return paddingLeft;
       }
       return paddingLeft + yAxisWidth;
-    }).property("paddingLeft", "yAxis.width", "yAxis.orient"),
+    }),
 
     /** 
       The y coordinate position of the graph content
@@ -1822,7 +1829,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Number
       @readonly
      */
-    graphY: (function () {
+    graphY: Ember['default'].computed("paddingTop", "xAxis.orient", "xAxis.height", function () {
       var paddingTop = this.get("paddingTop");
       var xAxisOrient = this.get("xAxis.orient");
       if (xAxisOrient === "top") {
@@ -1830,7 +1837,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
         return xAxisHeight + paddingTop;
       }
       return paddingTop;
-    }).property("paddingTop", "xAxis.orient", "xAxis.height"),
+    }),
 
     /**
       The width, in pixels, of the graph content
@@ -1838,13 +1845,13 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Number
       @readonly
      */
-    graphWidth: (function () {
+    graphWidth: Ember['default'].computed("width", "paddingRight", "paddingLeft", "yAxis.width", function () {
       var paddingRight = this.get("paddingRight") || 0;
       var paddingLeft = this.get("paddingLeft") || 0;
       var yAxisWidth = this.get("yAxis.width") || 0;
       var width = this.get("width") || 0;
       return Math.max(0, width - paddingRight - paddingLeft - yAxisWidth);
-    }).property("width", "paddingRight", "paddingLeft", "yAxis.width"),
+    }),
 
     /**
       The height, in pixels, of the graph content
@@ -1852,13 +1859,13 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Number
       @readonly
      */
-    graphHeight: (function () {
+    graphHeight: Ember['default'].computed("height", "paddingTop", "paddingBottom", "xAxis.height", function () {
       var paddingTop = this.get("paddingTop") || 0;
       var paddingBottom = this.get("paddingBottom") || 0;
       var xAxisHeight = this.get("xAxis.height") || 0;
       var height = this.get("height") || 0;
       return Math.max(0, height - paddingTop - paddingBottom - xAxisHeight);
-    }).property("height", "paddingTop", "paddingBottom", "xAxis.height"),
+    }),
 
     /**
       An SVG transform to position the graph content
@@ -1866,18 +1873,20 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type String
       @readonly
      */
-    graphTransform: (function () {
-      return "translate(%@, %@)".fmt(this.get("graphX"), this.get("graphY"));
-    }).property("graphX", "graphY"),
+    graphTransform: Ember['default'].computed("graphX", "graphY", function () {
+      var graphX = this.get("graphX");
+      var graphY = this.get("graphY");
+      return "translate(" + graphX + " " + graphY + ")";
+    }),
 
     /**
       Sets `hasRendered` to `true` on `willInsertElement`.
       @method _notifyHasRendered
       @private
     */
-    _notifyHasRendered: (function () {
+    _notifyHasRendered: Ember['default'].on("willInsertElement", function () {
       this.set("hasRendered", true);
-    }).on("willInsertElement"),
+    }),
 
     /**
       Gets the mouse position relative to the container
@@ -1950,10 +1959,10 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @method _setup
       @private
     */
-    _setup: (function () {
-      this.set("graphics", []);
-      this.set("selected", this.selectMultiple ? [] : null);
-    }).on("init"),
+    init: function init() {
+      this._super.apply(this, arguments);
+      this.set("selected", this.selectMultiple ? Ember['default'].A() : null);
+    },
 
     /**
       The amount of leeway, in pixels, to give before triggering a brush start.
@@ -1987,7 +1996,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     */
     brushEndAction: null,
 
-    _setupBrushAction: (function () {
+    _setupBrushAction: Ember['default'].on("didInsertElement", function () {
       var content = this.$(".nf-graph-content");
 
       var toBrushEventStreams = this._toBrushEventStreams.bind(this);
@@ -2013,7 +2022,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       retry().
       // subscribe and send the brush actions via Ember
       forEach(triggerComponentEvent);
-    }).on("didInsertElement"),
+    }),
 
     _toBrushEventStreams: function _toBrushEventStreams(mouseEvents) {
       var getStartInfo = this._getStartInfo;
@@ -2125,58 +2134,59 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     } });
 
 });
-define('ember-nf-graph-examples/components/nf-horizontal-line', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-horizontal-line', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "line",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "line",
 
-		attributeBindings: ["lineY:y1", "lineY:y2", "x1", "x2"],
+    attributeBindings: ["lineY:y1", "lineY:y2", "x1", "x2"],
 
-		classNames: ["nf-horizontal-line"],
+    classNames: ["nf-horizontal-line"],
 
-		/**
-	 	The y domain value at which to draw the horizontal line
-	 	@property y
-	 	@type Number
-	 	@default null
-	 */
-		y: null,
+    /**
+      The y domain value at which to draw the horizontal line
+      @property y
+      @type Number
+      @default null
+    */
+    y: null,
 
-		/**
-	 	The computed y coordinate of the line to draw
-	 	@property lineY
-	 	@type Number
-	 	@private
-	 	@readonly
-	 */
-		lineY: (function () {
-			var y = this.get("y");
-			var yScale = this.get("yScale");
-			return yScale ? yScale(y) : -1;
-		}).property("y", "yScale"),
+    /**
+      The computed y coordinate of the line to draw
+      @property lineY
+      @type Number
+      @private
+      @readonly
+    */
+    lineY: Ember['default'].computed("y", "yScale", function () {
+      var y = this.get("y");
+      var yScale = this.get("yScale");
+      var py = yScale ? yScale(y) : -1;
+      return py && py > 0 ? py : 0;
+    }),
 
-		/**
-	 	The left x coordinate of the line
-	 	@property x1
-	 	@type Number
-	 	@default 0
-	 	@private
-	 */
-		x1: 0,
+    /**
+      The left x coordinate of the line
+      @property x1
+      @type Number
+      @default 0
+      @private
+    */
+    x1: 0,
 
-		/**
-	 	The right x coordinate of the line
-	 	@property x2
-	 	@type Number
-	 	@private
-	 	@readonly
-	 */
-		x2: Ember['default'].computed.alias("graph.graphWidth") });
+    /**
+      The right x coordinate of the line
+      @property x2
+      @type Number
+      @private
+      @readonly
+    */
+    x2: Ember['default'].computed.alias("graph.graphWidth") });
 
 });
-define('ember-nf-graph-examples/components/nf-line', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-data-graphic', 'ember-cli-nf-graph/mixins/graph-line-utils', 'ember-cli-nf-graph/mixins/graph-selectable-graphic', 'ember-cli-nf-graph/mixins/graph-registered-graphic', 'ember-cli-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, DataGraphic, LineUtils, SelectableGraphic, RegisteredGraphic, GraphicWithTrackingDot, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-line', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-line-utils', 'ember-nf-graph/mixins/graph-selectable-graphic', 'ember-nf-graph/mixins/graph-registered-graphic', 'ember-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, DataGraphic, LineUtils, SelectableGraphic, RegisteredGraphic, GraphicWithTrackingDot, RequireScaleSource) {
 
   'use strict';
 
@@ -2203,12 +2213,12 @@ define('ember-nf-graph-examples/components/nf-line', ['exports', 'ember', 'ember
       @private
       @return {String} an SVG path data string
     */
-    lineFn: (function () {
+    lineFn: Ember['default'].computed("xScale", "yScale", "interpolator", function () {
       var xScale = this.get("xScale");
       var yScale = this.get("yScale");
       var interpolator = this.get("interpolator");
       return this.createLineFn(xScale, yScale, interpolator);
-    }).property("xScale", "yScale", "interpolator"),
+    }),
 
     /**
       The SVG path data string to render the line
@@ -2217,166 +2227,168 @@ define('ember-nf-graph-examples/components/nf-line', ['exports', 'ember', 'ember
       @private
       @readonly
     */
-    d: (function () {
+    d: Ember['default'].computed("renderedData.@each", "lineFn", function () {
       var renderedData = this.get("renderedData");
       var lineFn = this.get("lineFn");
       return lineFn(renderedData);
-    }).property("renderedData.@each", "lineFn"),
+    }),
 
     /**
       Event handler to toggle the `selected` property on click
       @method _toggleSelected
       @private
     */
-    _toggleSelected: (function () {
+    _toggleSelected: Ember['default'].on("click", function () {
       if (this.get("selectable")) {
         this.toggleProperty("selected");
       }
-    }).on("click") });
+    }) });
 
 });
-define('ember-nf-graph-examples/components/nf-plot', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/graph-event'], function (exports, Ember, HasGraphParent, RequireScaleSource, GraphEvent) {
+define('ember-nf-graph-examples/components/nf-plot', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/graph-event'], function (exports, Ember, HasGraphParent, RequireScaleSource, GraphEvent) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "g",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "g",
 
-		attributeBindings: ["transform"],
+    attributeBindings: ["transform"],
 
-		classNames: ["nf-plot"],
+    classNames: ["nf-plot"],
 
-		/**
-	 	The x domain value to set the plot at
-	 	@property x
-	 	@default null
-	 */
-		x: null,
+    /**
+      The x domain value to set the plot at
+      @property x
+      @default null
+    */
+    x: null,
 
-		/**
-	 	The y domain value to set the plot at
-	 	@property x
-	 	@default null
-	 */
-		y: null,
+    /**
+      The y domain value to set the plot at
+      @property x
+      @default null
+    */
+    y: null,
 
-		/**
-	 	True if an `x` value is present (defined, not null and non-empty)
-	 	@property hasX
-	 	@type Boolean
-	 	@readonly
-	 */
-		hasX: Ember['default'].computed.notEmpty("x"),
+    /**
+      True if an `x` value is present (defined, not null and non-empty)
+      @property hasX
+      @type Boolean
+      @readonly
+    */
+    hasX: Ember['default'].computed.notEmpty("x"),
 
-		/**
-	 	True if an `y` value is present (defined, not null and non-empty)
-	 	@property hasY
-	 	@type Boolean
-	 	@readonly
-	 */
-		hasY: Ember['default'].computed.notEmpty("y"),
+    /**
+      True if an `y` value is present (defined, not null and non-empty)
+      @property hasY
+      @type Boolean
+      @readonly
+    */
+    hasY: Ember['default'].computed.notEmpty("y"),
 
-		/**
-	 	The calculated visibility of the component
-	 	@property isVisible
-	 	@type Boolean
-	 	@readonly
-	 */
-		isVisible: Ember['default'].computed.and("hasX", "hasY"),
+    /**
+      The calculated visibility of the component
+      @property isVisible
+      @type Boolean
+      @readonly
+    */
+    isVisible: Ember['default'].computed.and("hasX", "hasY"),
 
-		/**
-	 	The calculated x coordinate
-	 	@property rangeX
-	 	@type Number
-	 	@readonly
-	 */
-		rangeX: (function () {
-			var xScale = this.get("xScale");
-			var x = this.get("x");
-			var hasX = this.get("hasX");
-			return (hasX && xScale ? xScale(x) : 0) || 0;
-		}).property("x", "xScale"),
+    /**
+      The calculated x coordinate
+      @property rangeX
+      @type Number
+      @readonly
+    */
+    rangeX: Ember['default'].computed("x", "xScale", function () {
+      var xScale = this.get("xScale");
+      var x = this.get("x");
+      var hasX = this.get("hasX");
+      return (hasX && xScale ? xScale(x) : 0) || 0;
+    }),
 
-		/**
-	 	The calculated y coordinate
-	 	@property rangeY
-	 	@type Number
-	 	@readonly
-	 */
-		rangeY: (function () {
-			var yScale = this.get("yScale");
-			var y = this.get("y");
-			var hasY = this.get("hasY");
-			return (hasY && yScale ? yScale(y) : 0) || 0;
-		}).property("y", "yScale"),
+    /**
+      The calculated y coordinate
+      @property rangeY
+      @type Number
+      @readonly
+    */
+    rangeY: Ember['default'].computed("y", "yScale", function () {
+      var yScale = this.get("yScale");
+      var y = this.get("y");
+      var hasY = this.get("hasY");
+      return (hasY && yScale ? yScale(y) : 0) || 0;
+    }),
 
-		/**
-	 	The SVG transform of the component's `<g>` tag.
-	 	@property transform
-	 	@type String
-	 	@readonly
-	 */
-		transform: (function () {
-			return "translate(%@ %@)".fmt(this.get("rangeX"), this.get("rangeY"));
-		}).property("rangeX", "rangeY"),
+    /**
+      The SVG transform of the component's `<g>` tag.
+      @property transform
+      @type String
+      @readonly
+    */
+    transform: Ember['default'].computed("rangeX", "rangeY", function () {
+      var rangeX = this.get("rangeX");
+      var rangeY = this.get("rangeY");
+      return "translate(" + rangeX + " " + rangeY + ")";
+    }),
 
-		data: null,
+    data: null,
 
-		click: function click(e) {
-			var context = GraphEvent['default'].create({
-				x: this.get("x"),
-				y: this.get("y"),
-				data: this.get("data"),
-				source: this,
-				graph: this.get("graph"),
-				originalEvent: e });
-			this.sendAction("action", context);
-		} });
-
-});
-define('ember-nf-graph-examples/components/nf-plots', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-data-graphic', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, DataGraphic, RequireScaleSource) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], DataGraphic['default'], RequireScaleSource['default'], {
-		tagName: "g",
-
-		classNames: ["nf-plots"],
-
-		/**
-	 	The parent controller to use for template binding
-	 	@property parentController
-	 	@type Ember.Controller
-	 	@readonly
-	 	@private
-	 */
-		parentController: Ember['default'].computed.alias("templateData.view.controller"),
-
-		/**
-	 	The model for adding plots to the graph
-	 	@property plotData
-	 	@readonly
-	 	@private
-	 */
-		plotData: (function () {
-			var renderedData = this.get("renderedData");
-			if (renderedData && Ember['default'].isArray(renderedData)) {
-				return renderedData.map(function (d) {
-					return {
-						x: d[0],
-						y: d[1],
-						data: d.data };
-				});
-			}
-		}).property("renderedData.@each"),
-
-		actions: {
-			itemClicked: function itemClicked(e) {
-				this.sendAction("action", e);
-			} } });
+    click: function click(e) {
+      var context = GraphEvent['default'].create({
+        x: this.get("x"),
+        y: this.get("y"),
+        data: this.get("data"),
+        source: this,
+        graph: this.get("graph"),
+        originalEvent: e });
+      this.sendAction("action", context);
+    } });
 
 });
-define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-plots', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, DataGraphic, RequireScaleSource) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], DataGraphic['default'], RequireScaleSource['default'], {
+    tagName: "g",
+
+    classNames: ["nf-plots"],
+
+    /**
+      The parent controller to use for template binding
+      @property parentController
+      @type Ember.Controller
+      @readonly
+      @private
+    */
+    parentController: Ember['default'].computed.alias("templateData.view.controller"),
+
+    /**
+      The model for adding plots to the graph
+      @property plotData
+      @readonly
+      @private
+    */
+    plotData: Ember['default'].computed("renderedData.@each", function () {
+      var renderedData = this.get("renderedData");
+      if (renderedData && Ember['default'].isArray(renderedData)) {
+        return Ember['default'].A(renderedData.map(function (d) {
+          return {
+            x: d[0],
+            y: d[1],
+            data: d.data };
+        }));
+      }
+    }),
+
+    actions: {
+      itemClicked: function itemClicked(e) {
+        this.sendAction("action", e);
+      } } });
+
+});
+define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
 
   'use strict';
 
@@ -2439,11 +2451,11 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type Number
       @readonly
     */
-    x: (function () {
+    x: Ember['default'].computed("xMin", "xScale", function () {
       var xScale = this.get("xScale");
       var xMin = this.get("xMin");
       return xScale(xMin);
-    }).property("xMin", "xScale"),
+    }),
 
     /**
       The computed width of the range marker.
@@ -2451,12 +2463,12 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type Number
       @readonly
     */
-    width: (function () {
+    width: Ember['default'].computed("xScale", "xMin", "xMax", function () {
       var xScale = this.get("xScale");
       var xMax = this.get("xMax");
       var xMin = this.get("xMin");
       return xScale(xMax) - xScale(xMin);
-    }).property("xScale", "xMin", "xMax"),
+    }),
 
     /**
       The computed y position of the range marker.
@@ -2464,7 +2476,7 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type Number
       @readonly
     */
-    y: (function () {
+    y: Ember['default'].computed("container.orient", "prevMarker.bottom", "prevMarker.y", "graph.graphHeight", "totalHeight", function () {
       var orient = this.get("container.orient");
       var prevBottom = this.get("prevMarker.bottom");
       var prevY = this.get("prevMarker.y");
@@ -2480,7 +2492,7 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       if (orient === "top") {
         return prevBottom;
       }
-    }).property("container.orient", "prevMarker.bottom", "prevMarker.y", "graph.graphHeight", "totalHeight"),
+    }),
 
     /**
       The computed total height of the range marker including its margins.
@@ -2488,12 +2500,12 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type Number
       @readonly
     */
-    totalHeight: (function () {
+    totalHeight: Ember['default'].computed("height", "marginTop", "marginBottom", function () {
       var height = this.get("height");
       var marginTop = this.get("marginTop");
       var marginBottom = this.get("marginBottom");
       return height + marginTop + marginBottom;
-    }).property("height", "marginTop", "marginBottom"),
+    }),
 
     /**
       The computed bottom of the range marker, not including the bottom margin.
@@ -2501,11 +2513,11 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type Number
       @readonly
     */
-    bottom: (function () {
+    bottom: Ember['default'].computed("y", "totalHeight", function () {
       var y = this.get("y");
       var totalHeight = this.get("totalHeight");
       return y + totalHeight;
-    }).property("y", "totalHeight"),
+    }),
 
     /**
       The computed SVG transform of the range marker container
@@ -2513,10 +2525,10 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type String
       @readonly
     */
-    transform: (function () {
-      var y = this.get("y");
-      return "translate(0 %@)".fmt(y || 0);
-    }).property("y"),
+    transform: Ember['default'].computed("y", function () {
+      var y = this.get("y") || 0;
+      return "translate(0 " + y + ")";
+    }),
 
     /**
       The computed SVG transform fo the range marker label container.
@@ -2524,10 +2536,10 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @type String
       @readonly
     */
-    labelTransform: (function () {
-      var x = this.get("x");
-      return "translate(%@ 0)".fmt(x || 0);
-    }).property("x"),
+    labelTransform: Ember['default'].computed("x", function () {
+      var x = this.get("x") || 0;
+      return "translate(" + x + " 0)";
+    }),
 
     /**
       Initialization function that registers the range marker with its parent 
@@ -2535,1035 +2547,871 @@ define('ember-nf-graph-examples/components/nf-range-marker', ['exports', 'ember'
       @method _setup
       @private
     */
-    _setup: (function () {
+    init: function init() {
+      this._super.apply(this, arguments);
       var container = this.nearestWithProperty("isRangeMarkerContainer");
       container.registerMarker(this);
       this.set("container", container);
-    }).on("init"),
+    },
 
     /**
       Unregisters the range marker from its parent when the range marker is destroyed.
       @method _unregister
       @private
     */
-    _unregister: (function () {
+    _unregister: Ember['default'].on("willDestroyElement", function () {
       this.get("container").unregisterMarker(this);
-    }).on("willDestroyElement")
+    })
   });
 
 });
-define('ember-nf-graph-examples/components/nf-range-markers', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent'], function (exports, Ember, HasGraphParent) {
+define('ember-nf-graph-examples/components/nf-range-markers', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent'], function (exports, Ember, HasGraphParent) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], {
-		tagName: "g",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], {
+    tagName: "g",
 
-		/**
-	 	Used by `nf-range-marker` to identify the `nf-range-markers` container
-	 	@property isRangeMarkerContainer
-	 	@type Boolean
-	 	@default true
-	 	@readonly
-	 */
-		isRangeMarkerContainer: true,
+    /**
+      Used by `nf-range-marker` to identify the `nf-range-markers` container
+      @property isRangeMarkerContainer
+      @type Boolean
+      @default true
+      @readonly
+    */
+    isRangeMarkerContainer: true,
 
-		/**
-	 	Sets the orientation of the range markers.
-	 		- `'bottom'` - Range markers start at the bottom and stack upward
-	 	- `'top'` - Range markers start at the top and stack downward
-	 	@property orient
-	 	@type String
-	 	@default 'bottom'
-	 */
-		orient: "bottom",
+    /**
+      Sets the orientation of the range markers.
+       - `'bottom'` - Range markers start at the bottom and stack upward
+      - `'top'` - Range markers start at the top and stack downward
+      @property orient
+      @type String
+      @default 'bottom'
+    */
+    orient: "bottom",
 
-		/**
-	 	The margin, in pixels, between the markers
-	 	@property markerMargin
-	 	@type Number
-	 	@default 10
-	 */
-		markerMargin: 10,
+    /**
+      The margin, in pixels, between the markers
+      @property markerMargin
+      @type Number
+      @default 10
+    */
+    markerMargin: 10,
 
-		/**
-	 	The marker components registered with this container
-	 	@property markers
-	 	@type Array
-	 	@readonly
-	 */
-		markers: (function () {
-			return [];
-		}).property(),
+    /**
+      The marker components registered with this container
+      @property markers
+      @type Array
+      @readonly
+    */
+    markers: Ember['default'].computed(function () {
+      return Ember['default'].A();
+    }),
 
-		/**
-	 	Adds the passed marker to the `markers` list, and sets the `prevMarker` and `nextMarker`
-	 	properties on the marker component and it's neighbor.
-	 	@method registerMarker
-	 	@param marker {nf-range-marker} the range marker to register with this container
-	 */
-		registerMarker: function registerMarker(marker) {
-			var markers = this.get("markers");
-			var prevMarker = markers[markers.length - 1];
+    /**
+      Adds the passed marker to the `markers` list, and sets the `prevMarker` and `nextMarker`
+      properties on the marker component and it's neighbor.
+      @method registerMarker
+      @param marker {nf-range-marker} the range marker to register with this container
+    */
+    registerMarker: function registerMarker(marker) {
+      var markers = this.get("markers");
+      var prevMarker = markers[markers.length - 1];
 
-			if (prevMarker) {
-				marker.set("prevMarker", prevMarker);
-				prevMarker.set("nextMarker", marker);
-			}
+      if (prevMarker) {
+        marker.set("prevMarker", prevMarker);
+        prevMarker.set("nextMarker", marker);
+      }
 
-			markers.pushObject(marker);
-		},
+      markers.pushObject(marker);
+    },
 
-		/**
-	 	Removes the marker from the `markers` list. Also updates the `nextMarker` and `prevMarker`
-	 	properties of it's neighboring components.
-	 	@method unregisterMarker
-	 	@param marker {nf-range-marker} the range marker to remove from the `markers` list.
-	 */
-		unregisterMarker: function unregisterMarker(marker) {
-			if (marker) {
-				var next = marker.nextMarker;
-				var prev = marker.prevMarker;
-				if (prev) {
-					prev.set("nextMarker", next);
-				}
-				if (next) {
-					next.set("prevMarker", prev);
-				}
-				this.get("markers").removeObject(marker);
-			}
-		} });
-
-});
-define('ember-nf-graph-examples/components/nf-right-tick', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "g",
-
-		classNames: ["nf-right-tick"],
-
-		/**
-	 	The transition duration in milliseconds
-	 	@property duration
-	 	@type Number
-	 	@default 400
-	 */
-		duration: 400,
-
-		/**
-	 	The domain value at which to place the tick
-	 	@property value
-	 	@type Number
-	 	@default null
-	 */
-		value: null,
-
-		/**
-	 	Sets the visibility of the component. Returns false if `y` is not 
-	 	a numeric data type.
-	 	@property isVisible
-	 	@private
-	 	@readonly
-	 */
-		isVisible: (function () {
-			return !isNaN(this.get("y"));
-		}).property("y"),
-
-		/**
-	 	The calculated y coordinate of the tick
-	 	@property y
-	 	@type Number
-	 	@readonly
-	 */
-		y: (function () {
-			var value = this.get("value");
-			var yScale = this.get("yScale");
-			var paddingTop = this.get("graph.paddingTop");
-			var vy = 0;
-			if (yScale) {
-				vy = yScale(value) || 0;
-			}
-			return vy + paddingTop;
-		}).property("value", "yScale", "graph.paddingTop"),
-
-		/**
-	 	The SVG transform used to render the tick
-	 	@property transform
-	 	@type String
-	 	@private
-	 	@readonly
-	 */
-		transform: (function () {
-			var y = this.get("y");
-			var graphWidth = this.get("graph.width");
-			return "translate(%@ %@)".fmt(graphWidth - 6, y - 3);
-		}).property("y", "graph.width"),
-
-		/**
-	 	performs the D3 transition to move the tick to the proper position.
-	 	@method _transitionalUpdate
-	 	@private
-	 */
-		_transitionalUpdate: function _transitionalUpdate() {
-			var transform = this.get("transform");
-			var path = this.get("path");
-			var duration = this.get("duration");
-			path.transition().duration(duration).attr("transform", transform);
-		},
-
-		/**
-	 	Schedules the transition when `value` changes on on init.
-	 	@method _triggerTransition
-	 	@private
-	 */
-		_triggerTransition: (function () {
-			Ember['default'].run.scheduleOnce("afterRender", this, this._transitionalUpdate);
-		}).observes("value").on("init"),
-
-		/**
-	 	Updates the tick position without a transition.
-	 	@method _nonTransitionalUpdate
-	 	@private
-	 */
-		_nonTransitionalUpdate: function _nonTransitionalUpdate() {
-			var transform = this.get("transform");
-			var path = this.get("path");
-			path.attr("transform", transform);
-		},
-
-		/**
-	 	Schedules the update of non-transitional positions
-	 	@method _triggerNonTransitionalUpdate
-	 	@private
-	 */
-		_triggerNonTransitionalUpdate: (function () {
-			Ember['default'].run.scheduleOnce("afterRender", this, this._nonTransitionalUpdate);
-		}).observes("graph.width"),
-
-		/**
-	 	Gets the elements required to do the d3 transitions
-	 	@method _getElements
-	 	@private
-	 */
-		_getElements: (function () {
-			var g = d3.select(this.$()[0]);
-			var path = g.selectAll("path").data([0]);
-			this.set("path", path);
-		}).on("didInsertElement")
-	});
+    /**
+      Removes the marker from the `markers` list. Also updates the `nextMarker` and `prevMarker`
+      properties of it's neighboring components.
+      @method unregisterMarker
+      @param marker {nf-range-marker} the range marker to remove from the `markers` list.
+    */
+    unregisterMarker: function unregisterMarker(marker) {
+      if (marker) {
+        var next = marker.nextMarker;
+        var prev = marker.prevMarker;
+        if (prev) {
+          prev.set("nextMarker", next);
+        }
+        if (next) {
+          next.set("prevMarker", prev);
+        }
+        this.get("markers").removeObject(marker);
+      }
+    } });
 
 });
-define('ember-nf-graph-examples/components/nf-scroll-area', ['exports', 'ember', 'ember-cli-nf-graph/utils/nf/scroll-area-action-context'], function (exports, Ember, ScrollAreaActionContext) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend({
-		/**
-	 	The tag name of the component
-	 	@property tagName
-	 	@type {String}
-	 	@default 'div'
-	 */
-		tagName: "div",
-
-		classNames: ["nf-scroll-area"],
-
-		/**
-	 	The name of the action to fire when scrolled
-	 	@property scrollAction
-	 	@type {String}
-	 	@default null
-	 */
-		scrollAction: null,
-
-		/**
-	 	The name of the action to fire when resized
-	 	@property resizeAction
-	 	@type {String}
-	 	@default null
-	 */
-		resizeAction: null,
-
-		/**
-	 	The name of the action to fire when scrolled *OR* resized
-	 	@property changeAction
-	 	@type {String}
-	 	@default null
-	 */
-		changeAction: null,
-
-		/**
-	 	The name of the action to fire when the list of child DOM nodes changes
-	 	@property childrenChangedAction
-	 	@type {String}
-	 	@default null
-	 */
-		childrenChangedAction: null,
-
-		/**
-	 	Gets or sets the scrollTop by percentage (decimal) of
-	 	scrollHeight
-	 	@property scrollTopPercentage
-	 	@type {Number}
-	 */
-		scrollTopPercentage: (function (key, value) {
-			if (arguments.length > 1) {
-				this._scrollTopPercentage = value;
-			}
-			return this._scrollTopPercentage;
-		}).property().volatile(),
-
-		_childMutationObserver: null,
-
-		_setupChildMutationObserver: (function () {
-			var handler = (function (e) {
-				var context = this.createActionContext(e);
-				this.sendAction("childrenChangedAction", context);
-				this.sendAction("changeAction", context);
-			}).bind(this);
-
-			this._childMutationObserver = new MutationObserver(handler);
-			this._childMutationObserver.observe(this.get("element"), { childList: true, subtree: true });
-
-			// trigger initial event
-			handler();
-		}).on("didInsertElement"),
-
-		_teardownChildMutationObserver: (function () {
-			if (this._childMutationObserver) {
-				this._childMutationObserver.disconnect();
-			}
-		}).on("willDestroyElement"),
-
-		_updateScrollTop: (function () {
-			var element = this.get("element");
-			if (element) {
-				var scrollTop = this.get("scrollTopPercentage") * (element.scrollHeight - this.$().outerHeight());
-				this.set("scrollTop", scrollTop);
-			}
-		}).observes("scrollTopPercentage").on("didInsertElement"),
-
-		/**
-	 	Gets or sets the scrollTop of the area
-	 	@property scrollTop
-	 	@type {Number}
-	 	@default 0
-	 */
-		scrollTop: (function (key, value) {
-			if (arguments.length > 1) {
-				this._scrollTop = value;
-			}
-			return this._scrollTop;
-		}).property().volatile(),
-
-		_updateScroll: (function () {
-			if (this.get("element")) {
-				this.$().scrollTop(this.get("scrollTop"));
-			}
-		}).observes("scrollTop").on("didInsertElement"),
-
-		/**
-	 	The optional action data to send with the action contextl
-	 	@property actionData
-	 	@type Any
-	 	@default null
-	 */
-		actionData: null,
-
-		_onScroll: function _onScroll(e) {
-			var context = this.createActionContext(e);
-			this._scrollTop = e.scrollTop;
-			this._scrollTopPercentage = e.scrollTop / e.scrollHeight;
-			this.trigger("didScroll", context);
-			this.sendAction("scrollAction", context);
-			this.sendAction("changeAction", context);
-		},
-
-		_onResize: function _onResize(e) {
-			var context = this.createActionContext(e);
-			this._scrollTop = e.scrollTop;
-			this._scrollTopPercentage = e.scrollTop / e.scrollHeight;
-			this.trigger("didResize", context);
-			this.sendAction("resizeAction", context);
-			this.sendAction("changeAction", context);
-		},
-
-		/**
-	 	Creates an action context to send with an action
-	 	@method createActionContext
-	 	@param e {Event} the original event object if there is one
-	 	@return {utils.nf.scroll-area-action-context}
-	 */
-		createActionContext: function createActionContext(e) {
-			var elem = this.$();
-			var context = {
-				width: elem.width(),
-				height: elem.height(),
-				scrollLeft: elem.scrollLeft(),
-				scrollTop: elem.scrollTop(),
-				scrollWidth: elem[0].scrollWidth,
-				scrollHeight: elem[0].scrollHeight,
-				outerWidth: elem.outerWidth(),
-				outerHeight: elem.outerHeight()
-			};
-
-			context.data = this.get("actionData");
-			context.source = this;
-			context.originalEvent = e;
-			return ScrollAreaActionContext['default'].create(context);
-		},
-
-		_setupElement: (function () {
-			var elem = this.get("element");
-			if (elem) {
-				elem.addEventListener("scroll", this._onScroll.bind(this));
-				elem.addEventListener("resize", this._onResize.bind(this));
-			}
-		}).on("didInsertElement"),
-
-		_unsubscribeEvents: (function () {
-			var elem = this.get("element");
-			if (elem) {
-				elem.removeEventListener("scroll", this._onScroll);
-				elem.removeEventListener("resize", this._onResize);
-			}
-		}).on("willDestroyElement") });
-
-});
-define('ember-nf-graph-examples/components/nf-selection-box', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/scale-utils'], function (exports, Ember, HasGraphParent, RequireScaleSource, scale_utils) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "g",
-
-		/**
-	 	The duration of the transition in ms
-	 	@property duration
-	 	@type Number
-	 	@default 400
-	 */
-		duration: 400,
-
-		/**
-	 	The minimum x domain value to encompass.
-	 	@property xMin
-	 	@default null
-	 */
-		xMin: null,
-
-		/**
-	 	The maximum x domain value to encompoass.
-	 	@property xMax
-	 	@default null
-	 */
-		xMax: null,
-
-		/**
-	 	The minimum y domain value to encompass.
-	 	@property yMin
-	 	@default null
-	 */
-		yMin: null,
-
-		/** 
-	 	The maximum y domain value to encompass
-	 	@property yMax
-	 	@default null
-	 */
-		yMax: null,
-
-		classNames: ["nf-selection-box"],
-
-		/**
-	 	The x pixel position of xMin
-	 	@property x0
-	 	@type Number
-	 */
-		x0: (function () {
-			return scale_utils.normalizeScale(this.get("xScale"), this.get("xMin"));
-		}).property("xMin", "xScale"),
-
-		/**
-	 	The x pixel position of xMax
-	 	@property x1
-	 	@type Number
-	 */
-		x1: (function () {
-			return scale_utils.normalizeScale(this.get("xScale"), this.get("xMax"));
-		}).property("xMax", "xScale"),
-
-		/**
-	 	The y pixel position of yMin
-	 	@property y0
-	 	@type Number
-	 */
-		y0: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("yMin"));
-		}).property("yMin", "yScale"),
-
-		/**
-	 	The y pixel position of yMax
-	 	@property y1
-	 	@type Number
-	 */
-		y1: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("yMax"));
-		}).property("yMax", "yScale"),
-
-		/**
-	 	The SVG path string for the box's rectangle.
-	 	@property rectPath
-	 	@type String
-	 */
-		rectPath: (function () {
-			return "M%@1,%@2 L%@1,%@4 L%@3,%@4 L%@3,%@2 L%@1,%@2".fmt(this.get("x0"), this.get("y0"), this.get("x1"), this.get("y1"));
-		}).property("x0", "x1", "y0", "y1"),
-
-		/**
-	 	Updates the position of the box with a transition
-	 	@method doUpdatePosition
-	 */
-		doUpdatePosition: function doUpdatePosition() {
-			var boxRect = this.get("boxRectElement");
-			var rectPath = this.get("rectPath");
-			var duration = this.get("duration");
-
-			boxRect.transition().duration(duration).attr("d", rectPath);
-		},
-
-		doUpdatePositionStatic: function doUpdatePositionStatic() {
-			var boxRect = this.get("boxRectElement");
-			var rectPath = this.get("rectPath");
-
-			boxRect.attr("d", rectPath);
-		},
-
-		/**
-	 	Schedules an update to the position of the box after render.
-	 	@method updatePosition
-	 	@private
-	 */
-		updatePosition: (function () {
-			Ember['default'].run.once(this, this.doUpdatePosition);
-		}).observes("xMin", "xMax", "yMin", "yMax"),
-
-		staticPositionChange: (function () {
-			Ember['default'].run.once(this, this.doUpdatePositionStatic);
-		}).observes("xScale", "yScale").on("didInsertElement"),
-
-		/**
-	 	Sets up the required d3 elements after component
-	 	is inserted into the DOM
-	 	@method didInsertElement
-	 */
-		didInsertElement: function didInsertElement() {
-			var element = this.get("element");
-			var g = d3.select(element);
-			var boxRect = g.append("path").attr("class", "nf-selection-box-rect").attr("d", this.get("rectPath"));
-
-			this.set("boxRectElement", boxRect);
-		} });
-
-});
-define('ember-nf-graph-examples/components/nf-svg-image', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/scale-utils', 'ember-cli-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
-		tagName: "image",
-
-		classNameBindings: [":nf-svg-image", "selectable", "selected"],
-
-		//HACK: for now xlink:href needs to be bound elsewhere.
-		attributeBindings: ["svgX:x", "svgY:y", "svgWidth:width", "svgHeight:height"],
-
-		click: function click() {
-			if (this.get("selectable")) {
-				this.toggleProperty("selected");
-			}
-		},
-
-		/**
-	 	The domain x value to place the image at.
-	 	@property x
-	 	@default null
-	 */
-		x: null,
-
-		/**
-	 	The domain y value to place the image at.
-	 	@property y
-	 	@default null
-	 */
-		y: null,
-
-		_width: 0,
-
-		/**
-	 	The width as a domain value. Does not handle ordinal
-	 	scales. To set a pixel value, set `svgWidth` directly.
-	 	@property width
-	 	@type Number
-	 	@default 0
-	 */
-		width: (function (key, value) {
-			if (arguments.length > 1) {
-				this._width = Math.max(0, +value) || 0;
-			}
-			return this._width;
-		}).property(),
-
-		_height: 0,
-
-		/**
-	 	The height as a domain value. Does not 
-	 	handle ordinal scales. To set a pixel value, just
-	 	set `svgHeight` directly.
-	 	@property height
-	 	@default null
-	 */
-		height: (function (key, value) {
-			if (arguments.length > 1) {
-				this._height = Math.max(0, +value) || 0;
-			}
-			return this._height;
-		}).property(),
-
-		/**
-	 	The image source url
-	 	@property src
-	 	@type String
-	 */
-		src: (function (key, value) {
-			//HACK: because attributeBindings doesn't currently work with namespaced attributes.
-			var $elem = this.$();
-			if (arguments.length > 1) {
-				$elem.attr("xlink:href", value);
-			}
-			return $elem.attr("xlink:href");
-		}).property(),
-
-		x0: (function () {
-			return scale_utils.normalizeScale(this.get("xScale"), this.get("x"));
-		}).property("x", "xScale"),
-
-		y0: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("y"));
-		}).property("y", "yScale"),
-
-		x1: (function () {
-			var scale = this.get("xScale");
-			if (scale.rangeBands) {
-				throw new Error("nf-image does not support ordinal scales");
-			}
-			return scale_utils.normalizeScale(scale, this.get("width") + this.get("x"));
-		}).property("xScale", "width", "x"),
-
-		y1: (function () {
-			var scale = this.get("yScale");
-			if (scale.rangeBands) {
-				throw new Error("nf-image does not support ordinal scales");
-			}
-			return scale_utils.normalizeScale(scale, this.get("height") + this.get("y"));
-		}).property("yScale", "height", "y"),
-
-		/**
-	 	The pixel value at which to plot the image.
-	 	@property svgX
-	 	@type Number
-	 */
-		svgX: (function () {
-			return Math.min(this.get("x0"), this.get("x1"));
-		}).property("x0", "x1"),
-
-		/**
-	 	The pixel value at which to plot the image.
-	 	@property svgY
-	 	@type Number
-	 */
-		svgY: (function () {
-			return Math.min(this.get("y0"), this.get("y1"));
-		}).property("y0", "y1"),
-
-		/**
-	 	The width, in pixels, of the image.
-	 	@property svgWidth
-	 	@type Number
-	 */
-		svgWidth: (function () {
-			return Math.abs(this.get("x0") - this.get("x1"));
-		}).property("x0", "x1"),
-
-		/**
-	 	The height, in pixels of the image.
-	 	@property svgHeight
-	 	@type Number
-	 */
-		svgHeight: (function () {
-			return Math.abs(this.get("y0") - this.get("y1"));
-		}).property("y0", "y1") });
-
-});
-define('ember-nf-graph-examples/components/nf-svg-line', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/scale-utils', 'ember-cli-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
-		tagName: "line",
-
-		classNameBindings: [":nf-svg-line", "selectable", "selected"],
-
-		attributeBindings: ["svgX1:x1", "svgX2:x2", "svgY1:y1", "svgY2:y2"],
-
-		click: function click() {
-			if (this.get("selectable")) {
-				this.toggleProperty("selected");
-			}
-		},
-
-		/**
-	 	The domain value to plot the SVGLineElement's x1 at.
-	 	@property x1
-	 	@default null
-	 */
-		x1: null,
-
-		/**
-	 	The domain value to plot the SVGLineElement's x2 at.
-	 	@property x2
-	 	@default null
-	 */
-		x2: null,
-
-		/**
-	 	The domain value to plot the SVGLineElement's y1 at.
-	 	@property y1
-	 	@default null
-	 */
-		y1: null,
-
-		/**
-	 	The domain value to plot the SVGLineElement's y2 at.
-	 	@property y2
-	 	@default null
-	 */
-		y2: null,
-
-		/**
-	 	The pixel value to plot the SVGLineElement's x1 at.
-	 	@property svgX1
-	 	@type Number
-	 */
-		svgX1: (function () {
-			return scale_utils.normalizeScale(this.get("xScale"), this.get("x1"));
-		}).property("x1", "xScale"),
-
-		/**
-	 	The pixel value to plot the SVGLineElement's x2 at.
-	 	@property svgX2
-	 	@type Number
-	 */
-		svgX2: (function () {
-			return scale_utils.normalizeScale(this.get("xScale"), this.get("x2"));
-		}).property("x2", "xScale"),
-
-		/**
-	 	The pixel value to plot the SVGLineElement's y1 at.
-	 	@property svgY1
-	 	@type Number
-	 */
-		svgY1: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("y1"));
-		}).property("y1", "yScale"),
-
-		/**
-	 	The pixel value to plot the SVGLineElement's y2 at.
-	 	@property svgY2
-	 	@type Number
-	 */
-		svgY2: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("y2"));
-		}).property("y2", "yScale") });
-
-});
-define('ember-nf-graph-examples/components/nf-svg-path', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/scale-utils', 'ember-cli-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
-		type: "path",
-
-		classNameBindings: [":nf-svg-path", "selectable", "selected"],
-
-		attributeBindings: ["d"],
-
-		/**
-	 	The array of points to use to plot the path. This is an array of arrays, in the following format:
-	 					// specify path pen commands
-	 				[
-	 					[50, 50, 'L'],
-	 					[100, 100, 'L']
-	 				]
-	 					// or they will default to 'L'
-	 				[
-	 					[50, 50],
-	 					[100, 100]
-	 				]
-	 	@property points
-	 @type Array
-	 */
-		points: null,
-
-		/**
-	 	The data points mapped to scale
-	 	@property svgPoints
-	 	@type Array
-	 */
-		svgPoints: (function () {
-			var points = this.get("points");
-			var xScale = this.get("xScale");
-			var yScale = this.get("yScale");
-			if (Ember['default'].isArray(points) && points.length > 0) {
-				return points.map(function (v) {
-					var dx = scale_utils.normalizeScale(xScale, v[0]);
-					var dy = scale_utils.normalizeScale(yScale, v[1]);
-					var c = v.length > 2 ? v[2] : "L";
-					return [dx, dy, c];
-				});
-			}
-		}).property("points.[]", "xScale", "yScale"),
-
-		click: function click() {
-			if (this.get("selectable")) {
-				this.toggleProperty("selected");
-			}
-		},
-
-		/**
-	 	The raw svg path d attribute output
-	 	@property d
-	 	@type String
-	 */
-		d: (function () {
-			var svgPoints = this.get("svgPoints");
-			if (Ember['default'].isArray(svgPoints) && svgPoints.length > 0) {
-				return svgPoints.reduce(function (d, pt, i) {
-					if (i === 0) {
-						d += "M" + pt[0] + "," + pt[1];
-					}
-					d += " " + pt[2] + pt[0] + "," + pt[1];
-					return d;
-				}, "");
-			} else {
-				return "M0,0";
-			}
-		}).property("svgPoints") });
-
-});
-define('ember-nf-graph-examples/components/nf-svg-rect', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/scale-utils', 'ember-cli-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
-		tagName: "path",
-
-		attributeBindings: ["d"],
-
-		classNameBindings: [":nf-svg-rect", "selectable", "selected"],
-
-		/**
-	 	The domain x value to place the rect at.
-	 	@property x
-	 	@default null
-	 */
-		x: null,
-
-		/**
-	 	The domain y value to place the rect at.
-	 	@property y
-	 	@default null
-	 */
-		y: null,
-
-		_width: 0,
-
-		/**
-	 	The width as a domain value. If xScale is ordinal, 
-	 	then this value is the indice offset to which to draw the 
-	 	rectangle. In other words, if it's `2`, then draw the rectangle
-	 	to two ordinals past whatever `x` is set to.
-	 	@property width
-	 	@type Number
-	 	@default 0
-	 */
-		width: (function (key, value) {
-			if (arguments.length > 1) {
-				this._width = +value;
-			}
-			return this._width;
-		}).property(),
-
-		_height: 0,
-
-		/**
-	 	The height as a domain value. If the yScale is ordinal,
-	 	this value is the indice offset to which to draw the rectangle.
-	 	For example, if the height is `3` then draw the rectangle
-	 	to two ordinals passed whatever `y` is set to.
-	 	@property height
-	 	@type Number
-	 	@default 0
-	 */
-		height: (function (key, value) {
-			if (arguments.length > 1) {
-				this._height = +value;
-			}
-			return this._height;
-		}).property(),
-
-		/**
-	 	The x value of the bottom right corner of the rectangle.
-	 	@property x1
-	 	@type Number
-	 */
-		x1: (function () {
-			var xScale = this.get("xScale");
-			var w = this.get("width");
-			var x = this.get("x");
-			if (xScale.rangeBands) {
-				var domain = xScale.domain();
-				var fromIndex = domain.indexOf(x);
-				var toIndex = fromIndex + w;
-				return scale_utils.normalizeScale(xScale, domain[toIndex]);
-			} else {
-				x = +x || 0;
-				return scale_utils.normalizeScale(xScale, w + x);
-			}
-		}).property("width", "x", "xScale"),
-
-		/**
-	 	The y value of the bottom right corner of the rectangle
-	 	@property y1
-	 	@type Number
-	 */
-		y1: (function () {
-			var yScale = this.get("yScale");
-			var h = this.get("height");
-			var y = this.get("y");
-			if (yScale.rangeBands) {
-				var domain = yScale.domain();
-				var fromIndex = domain.indexOf(y);
-				var toIndex = fromIndex + h;
-				return scale_utils.normalizeScale(yScale, domain[toIndex]);
-			} else {
-				y = +y || 0;
-				return scale_utils.normalizeScale(yScale, h + y);
-			}
-		}).property("height", "y", "yScale"),
-
-		/**
-	 	The x value of the top right corner of the rectangle
-	 	@property x0
-	 	@type Number
-	 */
-		x0: (function () {
-			return scale_utils.normalizeScale(this.get("xScale"), this.get("x"));
-		}).property("x", "xScale"),
-
-		/**
-	 	The y value of the top right corner of the rectangle.
-	 	@property y0
-	 	@type Number
-	 */
-		y0: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("y"));
-		}).property("y", "yScale"),
-
-		/**
-	 	The SVG path data for the rectangle
-	 	@property d
-	 	@type String
-	 */
-		d: (function () {
-			var x0 = this.get("x0");
-			var y0 = this.get("y0");
-			var x1 = this.get("x1");
-			var y1 = this.get("y1");
-			return "M%@1,%@2 L%@1,%@4 L%@3,%@4 L%@3,%@2 L%@1,%@2".fmt(x0, y0, x1, y1);
-		}).property("x0", "y0", "x1", "y1"),
-
-		/**
-	 	Click event handler. Toggles selected if selectable.
-	 	@method click
-	 */
-		click: function click() {
-			if (this.get("selectable")) {
-				this.toggleProperty("selected");
-			}
-		}
-	});
-
-});
-define('ember-nf-graph-examples/components/nf-vertical-line', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
-
-	'use strict';
-
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "line",
-
-		classNames: ["nf-vertical-line"],
-
-		attributeBindings: ["lineX:x1", "lineX:x2", "y1", "y2"],
-
-		/**
-	 	The top y coordinate of the line
-	 	@property y1
-	 	@type Number
-	 	@default 0
-	 	@private
-	 */
-		y1: 0,
-
-		/**
-	 	The bottom y coordinate of the line
-	 	@property y2
-	 	@type Number
-	 	@private
-	 	@readonly
-	 */
-		y2: Ember['default'].computed.alias("graph.graphHeight"),
-
-		/**
-	 	The x domain value at which to draw the vertical line on the graph
-	 	@property x
-	 	@type Number
-	 	@default null
-	 */
-		x: null,
-
-		/**
-	 	The calculated x coordinate of the vertical line
-	 	@property lineX
-	 	@type Number
-	 	@private
-	 	@readonly
-	 */
-		lineX: (function () {
-			var xScale = this.get("xScale");
-			var x = this.get("x");
-			return xScale ? xScale(x) : -1;
-		}).property("xScale", "x") });
-
-});
-define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-right-tick', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
 
   'use strict';
 
   exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
     tagName: "g",
+
+    classNames: ["nf-right-tick"],
+
+    /**
+      The transition duration in milliseconds
+      @property duration
+      @type Number
+      @default 400
+    */
+    duration: 400,
+
+    /**
+      The domain value at which to place the tick
+      @property value
+      @type Number
+      @default null
+    */
+    value: null,
+
+    /**
+      Sets the visibility of the component. Returns false if `y` is not 
+      a numeric data type.
+      @property isVisible
+      @private
+      @readonly
+    */
+    isVisible: Ember['default'].computed("y", function () {
+      return !isNaN(this.get("y"));
+    }),
+
+    /**
+      The calculated y coordinate of the tick
+      @property y
+      @type Number
+      @readonly
+    */
+    y: Ember['default'].computed("value", "yScale", "graph.paddingTop", function () {
+      var value = this.get("value");
+      var yScale = this.get("yScale");
+      var paddingTop = this.get("graph.paddingTop");
+      var vy = 0;
+      if (yScale) {
+        vy = yScale(value) || 0;
+      }
+      return vy + paddingTop;
+    }),
+
+    /**
+      The SVG transform used to render the tick
+      @property transform
+      @type String
+      @private
+      @readonly
+    */
+    transform: Ember['default'].computed("y", "graph.width", function () {
+      var y = this.get("y");
+      var graphWidth = this.get("graph.width");
+      var x0 = graphWidth - 6;
+      var y0 = y - 3;
+      return "translate(" + x0 + " " + y0 + ")";
+    }),
+
+    /**
+      performs the D3 transition to move the tick to the proper position.
+      @method _transitionalUpdate
+      @private
+    */
+    _transitionalUpdate: function _transitionalUpdate() {
+      var transform = this.get("transform");
+      var path = this.get("path");
+      var duration = this.get("duration");
+      path.transition().duration(duration).attr("transform", transform);
+    },
+
+    /**
+      Schedules the transition when `value` changes on on init.
+      @method _triggerTransition
+      @private
+    */
+    _triggerTransition: Ember['default'].on("init", Ember['default'].observer("value", function () {
+      Ember['default'].run.scheduleOnce("afterRender", this, this._transitionalUpdate);
+    })),
+
+    /**
+      Updates the tick position without a transition.
+      @method _nonTransitionalUpdate
+      @private
+    */
+    _nonTransitionalUpdate: function _nonTransitionalUpdate() {
+      var transform = this.get("transform");
+      var path = this.get("path");
+      path.attr("transform", transform);
+    },
+
+    /**
+      Schedules the update of non-transitional positions
+      @method _triggerNonTransitionalUpdate
+      @private
+    */
+    _triggerNonTransitionalUpdate: Ember['default'].observer("graph.width", function () {
+      Ember['default'].run.scheduleOnce("afterRender", this, this._nonTransitionalUpdate);
+    }),
+
+    /**
+      Gets the elements required to do the d3 transitions
+      @method _getElements
+      @private
+    */
+    _getElements: Ember['default'].on("didInsertElement", function () {
+      var g = d3.select(this.$()[0]);
+      var path = g.selectAll("path").data([0]);
+      this.set("path", path);
+    })
+  });
+
+});
+define('ember-nf-graph-examples/components/nf-selection-box', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils'], function (exports, Ember, HasGraphParent, RequireScaleSource, scale_utils) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "g",
+
+    /**
+      The duration of the transition in ms
+      @property duration
+      @type Number
+      @default 400
+    */
+    duration: 400,
+
+    /**
+      The minimum x domain value to encompass.
+      @property xMin
+      @default null
+    */
+    xMin: null,
+
+    /**
+      The maximum x domain value to encompoass.
+      @property xMax
+      @default null
+    */
+    xMax: null,
+
+    /**
+      The minimum y domain value to encompass.
+      @property yMin
+      @default null
+    */
+    yMin: null,
+
+    /** 
+      The maximum y domain value to encompass
+      @property yMax
+      @default null
+    */
+    yMax: null,
+
+    classNames: ["nf-selection-box"],
+
+    /**
+      The x pixel position of xMin
+      @property x0
+      @type Number
+    */
+    x0: Ember['default'].computed("xMin", "xScale", function () {
+      return scale_utils.normalizeScale(this.get("xScale"), this.get("xMin"));
+    }),
+
+    /**
+      The x pixel position of xMax
+      @property x1
+      @type Number
+    */
+    x1: Ember['default'].computed("xMax", "xScale", function () {
+      return scale_utils.normalizeScale(this.get("xScale"), this.get("xMax"));
+    }),
+
+    /**
+      The y pixel position of yMin
+      @property y0
+      @type Number
+    */
+    y0: Ember['default'].computed("yMin", "yScale", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("yMin"));
+    }),
+
+    /**
+      The y pixel position of yMax
+      @property y1
+      @type Number
+    */
+    y1: Ember['default'].computed("yMax", "yScale", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("yMax"));
+    }),
+
+    /**
+      The SVG path string for the box's rectangle.
+      @property rectPath
+      @type String
+    */
+    rectPath: Ember['default'].computed("x0", "x1", "y0", "y1", function () {
+      var x0 = this.get("x0");
+      var x1 = this.get("x1");
+      var y0 = this.get("y0");
+      var y1 = this.get("y1");
+      return "M" + x0 + "," + y0 + " L" + x0 + "," + y1 + " L" + x1 + "," + y1 + " L" + x1 + "," + y0 + " L" + x0 + "," + y0;
+    }),
+
+    /**
+      Updates the position of the box with a transition
+      @method doUpdatePosition
+    */
+    doUpdatePosition: function doUpdatePosition() {
+      var boxRect = this.get("boxRectElement");
+      var rectPath = this.get("rectPath");
+      var duration = this.get("duration");
+
+      boxRect.transition().duration(duration).attr("d", rectPath);
+    },
+
+    doUpdatePositionStatic: function doUpdatePositionStatic() {
+      var boxRect = this.get("boxRectElement");
+      var rectPath = this.get("rectPath");
+
+      boxRect.attr("d", rectPath);
+    },
+
+    /**
+      Schedules an update to the position of the box after render.
+      @method updatePosition
+      @private
+    */
+    updatePosition: Ember['default'].observer("xMin", "xMax", "yMin", "yMax", function () {
+      Ember['default'].run.once(this, this.doUpdatePosition);
+    }),
+
+    staticPositionChange: Ember['default'].on("didInsertElement", Ember['default'].observer("xScale", "yScale", function () {
+      Ember['default'].run.once(this, this.doUpdatePositionStatic);
+    })),
+
+    /**
+      Sets up the required d3 elements after component
+      is inserted into the DOM
+      @method didInsertElement
+    */
+    didInsertElement: function didInsertElement() {
+      var element = this.get("element");
+      var g = d3.select(element);
+      var boxRect = g.append("path").attr("class", "nf-selection-box-rect").attr("d", this.get("rectPath"));
+
+      this.set("boxRectElement", boxRect);
+    } });
+
+});
+define('ember-nf-graph-examples/components/nf-svg-image', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
+    tagName: "image",
+
+    classNameBindings: [":nf-svg-image", "selectable", "selected"],
+
+    //HACK: for now xlink:href needs to be bound elsewhere.
+    attributeBindings: ["svgX:x", "svgY:y", "svgWidth:width", "svgHeight:height"],
+
+    click: function click() {
+      if (this.get("selectable")) {
+        this.toggleProperty("selected");
+      }
+    },
+
+    /**
+      The domain x value to place the image at.
+      @property x
+      @default null
+    */
+    x: null,
+
+    /**
+      The domain y value to place the image at.
+      @property y
+      @default null
+    */
+    y: null,
+
+    _width: 0,
+
+    /**
+      The width as a domain value. Does not handle ordinal
+      scales. To set a pixel value, set `svgWidth` directly.
+      @property width
+      @type Number
+      @default 0
+    */
+    width: Ember['default'].computed(function (key, value) {
+      if (arguments.length > 1) {
+        this._width = Math.max(0, +value) || 0;
+      }
+      return this._width;
+    }),
+
+    _height: 0,
+
+    /**
+      The height as a domain value. Does not 
+      handle ordinal scales. To set a pixel value, just
+      set `svgHeight` directly.
+      @property height
+      @default null
+    */
+    height: Ember['default'].computed(function (key, value) {
+      if (arguments.length > 1) {
+        this._height = Math.max(0, +value) || 0;
+      }
+      return this._height;
+    }),
+
+    /**
+      The image source url
+      @property src
+      @type String
+    */
+    src: Ember['default'].computed(function (key, value) {
+      //HACK: because attributeBindings doesn't currently work with namespaced attributes.
+      var $elem = this.$();
+      if (arguments.length > 1) {
+        $elem.attr("xlink:href", value);
+      }
+      return $elem.attr("xlink:href");
+    }),
+
+    x0: Ember['default'].computed("x", "xScale", function () {
+      return scale_utils.normalizeScale(this.get("xScale"), this.get("x"));
+    }),
+
+    y0: Ember['default'].computed("y", "yScale", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("y"));
+    }),
+
+    x1: Ember['default'].computed("xScale", "width", "x", function () {
+      var scale = this.get("xScale");
+      if (scale.rangeBands) {
+        throw new Error("nf-image does not support ordinal scales");
+      }
+      return scale_utils.normalizeScale(scale, this.get("width") + this.get("x"));
+    }),
+
+    y1: Ember['default'].computed("yScale", "height", "y", function () {
+      var scale = this.get("yScale");
+      if (scale.rangeBands) {
+        throw new Error("nf-image does not support ordinal scales");
+      }
+      return scale_utils.normalizeScale(scale, this.get("height") + this.get("y"));
+    }),
+
+    /**
+      The pixel value at which to plot the image.
+      @property svgX
+      @type Number
+    */
+    svgX: Ember['default'].computed("x0", "x1", function () {
+      return Math.min(this.get("x0"), this.get("x1"));
+    }),
+
+    /**
+      The pixel value at which to plot the image.
+      @property svgY
+      @type Number
+    */
+    svgY: Ember['default'].computed("y0", "y1", function () {
+      return Math.min(this.get("y0"), this.get("y1"));
+    }),
+
+    /**
+      The width, in pixels, of the image.
+      @property svgWidth
+      @type Number
+    */
+    svgWidth: Ember['default'].computed("x0", "x1", function () {
+      return Math.abs(this.get("x0") - this.get("x1"));
+    }),
+
+    /**
+      The height, in pixels of the image.
+      @property svgHeight
+      @type Number
+    */
+    svgHeight: Ember['default'].computed("y0", "y1", function () {
+      return Math.abs(this.get("y0") - this.get("y1"));
+    }) });
+
+});
+define('ember-nf-graph-examples/components/nf-svg-line', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
+    tagName: "line",
+
+    classNameBindings: [":nf-svg-line", "selectable", "selected"],
+
+    attributeBindings: ["svgX1:x1", "svgX2:x2", "svgY1:y1", "svgY2:y2"],
+
+    click: function click() {
+      if (this.get("selectable")) {
+        this.toggleProperty("selected");
+      }
+    },
+
+    /**
+      The domain value to plot the SVGLineElement's x1 at.
+      @property x1
+      @default null
+    */
+    x1: null,
+
+    /**
+      The domain value to plot the SVGLineElement's x2 at.
+      @property x2
+      @default null
+    */
+    x2: null,
+
+    /**
+      The domain value to plot the SVGLineElement's y1 at.
+      @property y1
+      @default null
+    */
+    y1: null,
+
+    /**
+      The domain value to plot the SVGLineElement's y2 at.
+      @property y2
+      @default null
+    */
+    y2: null,
+
+    /**
+      The pixel value to plot the SVGLineElement's x1 at.
+      @property svgX1
+      @type Number
+    */
+    svgX1: Ember['default'].computed("x1", "xScale", function () {
+      return scale_utils.normalizeScale(this.get("xScale"), this.get("x1"));
+    }),
+
+    /**
+      The pixel value to plot the SVGLineElement's x2 at.
+      @property svgX2
+      @type Number
+    */
+    svgX2: Ember['default'].computed("x2", "xScale", function () {
+      return scale_utils.normalizeScale(this.get("xScale"), this.get("x2"));
+    }),
+
+    /**
+      The pixel value to plot the SVGLineElement's y1 at.
+      @property svgY1
+      @type Number
+    */
+    svgY1: Ember['default'].computed("y1", "yScale", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("y1"));
+    }),
+
+    /**
+      The pixel value to plot the SVGLineElement's y2 at.
+      @property svgY2
+      @type Number
+    */
+    svgY2: Ember['default'].computed("y2", "yScale", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("y2"));
+    }) });
+
+});
+define('ember-nf-graph-examples/components/nf-svg-path', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
+    type: "path",
+
+    classNameBindings: [":nf-svg-path", "selectable", "selected"],
+
+    attributeBindings: ["d"],
+
+    /**
+      The array of points to use to plot the path. This is an array of arrays, in the following format:
+             // specify path pen commands
+            [
+              [50, 50, 'L'],
+              [100, 100, 'L']
+            ]
+             // or they will default to 'L'
+            [
+              [50, 50],
+              [100, 100]
+            ]
+     @property points
+    @type Array
+    */
+    points: null,
+
+    /**
+      The data points mapped to scale
+      @property svgPoints
+      @type Array
+    */
+    svgPoints: Ember['default'].computed("points.[]", "xScale", "yScale", function () {
+      var points = this.get("points");
+      var xScale = this.get("xScale");
+      var yScale = this.get("yScale");
+      if (Ember['default'].isArray(points) && points.length > 0) {
+        return points.map(function (v) {
+          var dx = scale_utils.normalizeScale(xScale, v[0]);
+          var dy = scale_utils.normalizeScale(yScale, v[1]);
+          var c = v.length > 2 ? v[2] : "L";
+          return [dx, dy, c];
+        });
+      }
+    }),
+
+    click: function click() {
+      if (this.get("selectable")) {
+        this.toggleProperty("selected");
+      }
+    },
+
+    /**
+      The raw svg path d attribute output
+      @property d
+      @type String
+    */
+    d: Ember['default'].computed("svgPoints", function () {
+      var svgPoints = this.get("svgPoints");
+      if (Ember['default'].isArray(svgPoints) && svgPoints.length > 0) {
+        return svgPoints.reduce(function (d, pt, i) {
+          if (i === 0) {
+            d += "M" + pt[0] + "," + pt[1];
+          }
+          d += " " + pt[2] + pt[0] + "," + pt[1];
+          return d;
+        }, "");
+      } else {
+        return "M0,0";
+      }
+    }) });
+
+});
+define('ember-nf-graph-examples/components/nf-svg-rect', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/mixins/graph-selectable-graphic'], function (exports, Ember, HasGraphParent, RequiresScaleSource, scale_utils, SelectableGraphic) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequiresScaleSource['default'], SelectableGraphic['default'], {
+    tagName: "path",
+
+    attributeBindings: ["d"],
+
+    classNameBindings: [":nf-svg-rect", "selectable", "selected"],
+
+    /**
+      The domain x value to place the rect at.
+      @property x
+      @default null
+    */
+    x: null,
+
+    /**
+      The domain y value to place the rect at.
+      @property y
+      @default null
+    */
+    y: null,
+
+    _width: 0,
+
+    /**
+      The width as a domain value. If xScale is ordinal, 
+      then this value is the indice offset to which to draw the 
+      rectangle. In other words, if it's `2`, then draw the rectangle
+      to two ordinals past whatever `x` is set to.
+      @property width
+      @type Number
+      @default 0
+    */
+    width: Ember['default'].computed(function (key, value) {
+      if (arguments.length > 1) {
+        this._width = +value;
+      }
+      return this._width;
+    }),
+
+    _height: 0,
+
+    /**
+      The height as a domain value. If the yScale is ordinal,
+      this value is the indice offset to which to draw the rectangle.
+      For example, if the height is `3` then draw the rectangle
+      to two ordinals passed whatever `y` is set to.
+      @property height
+      @type Number
+      @default 0
+    */
+    height: Ember['default'].computed(function (key, value) {
+      if (arguments.length > 1) {
+        this._height = +value;
+      }
+      return this._height;
+    }),
+
+    /**
+      The x value of the bottom right corner of the rectangle.
+      @property x1
+      @type Number
+    */
+    x1: Ember['default'].computed("width", "x", "xScale", function () {
+      var xScale = this.get("xScale");
+      var w = this.get("width");
+      var x = this.get("x");
+      if (xScale.rangeBands) {
+        var domain = xScale.domain();
+        var fromIndex = domain.indexOf(x);
+        var toIndex = fromIndex + w;
+        return scale_utils.normalizeScale(xScale, domain[toIndex]);
+      } else {
+        x = +x || 0;
+        return scale_utils.normalizeScale(xScale, w + x);
+      }
+    }),
+
+    /**
+      The y value of the bottom right corner of the rectangle
+      @property y1
+      @type Number
+    */
+    y1: Ember['default'].computed("height", "y", "yScale", function () {
+      var yScale = this.get("yScale");
+      var h = this.get("height");
+      var y = this.get("y");
+      if (yScale.rangeBands) {
+        var domain = yScale.domain();
+        var fromIndex = domain.indexOf(y);
+        var toIndex = fromIndex + h;
+        return scale_utils.normalizeScale(yScale, domain[toIndex]);
+      } else {
+        y = +y || 0;
+        return scale_utils.normalizeScale(yScale, h + y);
+      }
+    }),
+
+    /**
+      The x value of the top right corner of the rectangle
+      @property x0
+      @type Number
+    */
+    x0: Ember['default'].computed("x", "xScale", function () {
+      return scale_utils.normalizeScale(this.get("xScale"), this.get("x"));
+    }),
+
+    /**
+      The y value of the top right corner of the rectangle.
+      @property y0
+      @type Number
+    */
+    y0: Ember['default'].computed("y", "yScale", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("y"));
+    }),
+
+    /**
+      The SVG path data for the rectangle
+      @property d
+      @type String
+    */
+    d: Ember['default'].computed("x0", "y0", "x1", "y1", function () {
+      var x0 = this.get("x0");
+      var y0 = this.get("y0");
+      var x1 = this.get("x1");
+      var y1 = this.get("y1");
+      return "M" + x0 + "," + y0 + " L" + x0 + "," + y1 + " L" + x1 + "," + y1 + " L" + x1 + "," + y0 + " L" + x0 + "," + y0;
+    }),
+
+    /**
+      Click event handler. Toggles selected if selectable.
+      @method click
+    */
+    click: function click() {
+      if (this.get("selectable")) {
+        this.toggleProperty("selected");
+      }
+    }
+  });
+
+});
+define('ember-nf-graph-examples/components/nf-vertical-line', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "line",
+
+    classNames: ["nf-vertical-line"],
+
+    attributeBindings: ["lineX:x1", "lineX:x2", "y1", "y2"],
+
+    /**
+      The top y coordinate of the line
+      @property y1
+      @type Number
+      @default 0
+      @private
+    */
+    y1: 0,
+
+    /**
+      The bottom y coordinate of the line
+      @property y2
+      @type Number
+      @private
+      @readonly
+    */
+    y2: Ember['default'].computed.alias("graph.graphHeight"),
+
+    /**
+      The x domain value at which to draw the vertical line on the graph
+      @property x
+      @type Number
+      @default null
+    */
+    x: null,
+
+    /**
+      The calculated x coordinate of the vertical line
+      @property lineX
+      @type Number
+      @private
+      @readonly
+    */
+    lineX: Ember['default'].computed("xScale", "x", function () {
+      var xScale = this.get("xScale");
+      var x = this.get("x");
+      var px = xScale ? xScale(x) : -1;
+      return px && px > 0 ? px : 0;
+    }) });
+
+});
+define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph-examples/templates/components/nf-x-axis'], function (exports, Ember, HasGraphParent, RequireScaleSource, layout) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "g",
+
+    layout: layout['default'],
+    template: null,
+
+    useDefaultTemplate: Ember['default'].computed.equal("template", null),
 
     attributeBindings: ["transform"],
     classNameBindings: ["orientClass"],
@@ -3594,7 +3442,7 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
     tickLength: 0,
 
     /**
-      The spacing between the end of the tick line and the origin of the templated 
+      The spacing between the end of the tick line and the origin of the templated
       tick content
       @property tickPadding
       @type Number
@@ -3616,23 +3464,18 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       An optional filtering function to allow more control over what tick marks are displayed.
       The function should have exactly the same signature as the function you'd use for an
       `Array.prototype.filter()`.
-    
-      @property tickFilter
+       @property tickFilter
       @type Function
       @default null
       @example
-    
-            {{#nf-x-axis tickFilter=myFilter}} 
+             {{#nf-x-axis tickFilter=myFilter}}
               <text>{{tick.value}}</text>
             {{/nf-x-axis}}
-    
-      And on your controller:
-      
-            myFilter: function(tick, index, ticks) {
+       And on your controller:
+             myFilter: function(tick, index, ticks) {
               return tick.value < 1000;
             },
-    
-      The above example will filter down the set of ticks to only those that are less than 1000.
+       The above example will filter down the set of ticks to only those that are less than 1000.
     */
     tickFilter: Ember['default'].computed.alias("_tickFilter"),
 
@@ -3642,9 +3485,9 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type String
       @readonly
     */
-    orientClass: (function () {
+    orientClass: Ember['default'].computed("orient", function () {
       return "orient-" + this.get("orient");
-    }).property("orient"),
+    }),
 
     /**
       The SVG Transform applied to this component's container.
@@ -3652,19 +3495,19 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type String
       @readonly
     */
-    transform: (function () {
+    transform: Ember['default'].computed("x", "y", function () {
       var x = this.get("x") || 0;
       var y = this.get("y") || 0;
-      return "translate(%@ %@)".fmt(x, y);
-    }).property("x", "y"),
+      return "translate(" + x + " " + y + ")";
+    }),
 
-    /** 
+    /**
       The y position of this component's container.
       @property y
       @type Number
       @readonly
     */
-    y: (function () {
+    y: Ember['default'].computed("orient", "graph.paddingTop", "graph.paddingBottom", "graph.height", "height", function () {
       var orient = this.get("orient");
       var graphHeight = this.get("graph.height");
       var height = this.get("height");
@@ -3679,7 +3522,7 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       }
 
       return y || 0;
-    }).property("orient", "graph.paddingTop", "graph.paddingBottom", "graph.height", "height"),
+    }),
 
     /**
       This x position of this component's container
@@ -3687,9 +3530,15 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type Number
       @readonly
     */
-    x: (function () {
+    x: Ember['default'].computed("graph.graphX", function () {
       return this.get("graph.graphX") || 0;
-    }).property("graph.graphX"),
+    }),
+
+    init: function init() {
+      this._super.apply(this, arguments);
+      this.set("graph.xAxis", this);
+      Ember['default'].deprecate("Non-block form of tick is deprecated. Please add `as |tick|` to your template.", this.get("template.blockParams"));
+    },
 
     /**
       The width of the component
@@ -3699,18 +3548,13 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
     */
     width: Ember['default'].computed.alias("graph.graphWidth"),
 
-    /**
-      Function to create the tick values. Can be overriden to provide specific values.
-      @method tickFactory
-      @param xScale {Function} a d3 scale function
-      @param tickCount {Number} the number of ticks desired
-      @param uniqueXData {Array} all x data represented, filted to be unique (used for ordinal cases)
-      @param xScaleType {String} the scale type of the containing graph.
-      @return {Array} an array of domain values at which ticks should be placed.
-    */
-    tickFactory: function tickFactory(xScale, tickCount, uniqueXData, xScaleType) {
-      return xScaleType === "ordinal" ? uniqueXData : xScale.ticks(tickCount);
-    },
+    tickData: Ember['default'].computed("xScale", "graph.xScaleType", "uniqueXData", "tickCount", function () {
+      if (this.get("graph.xScaleType") === "ordinal") {
+        return this.get("uniqueXData");
+      } else {
+        return this.get("xScale").ticks(this.get("tickCount"));
+      }
+    }),
 
     /**
       A unique set of all x data on the graph
@@ -3718,15 +3562,7 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type Array
       @readonly
     */
-    uniqueXData: (function () {
-      var xData = this.get("graph.xData");
-      return xData.reduce(function (unique, d) {
-        if (unique.indexOf(d) === -1) {
-          unique.push(d);
-        }
-        return unique;
-      }, []);
-    }).property("graph.xData.@each"),
+    uniqueXData: Ember['default'].computed.uniq("graph.xData"),
 
     /**
       The models for the ticks to display on the axis.
@@ -3734,17 +3570,15 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type Array
       @readonly
     */
-    ticks: (function () {
-      var tickCount = this.get("tickCount");
+    ticks: Ember['default'].computed("xScale", "tickPadding", "tickLength", "height", "orient", "tickFilter", "tickData", "graph.xScaleType", function () {
       var xScale = this.get("xScale");
+      var xScaleType = this.get("graph.xScaleType");
       var tickPadding = this.get("tickPadding");
       var tickLength = this.get("tickLength");
       var height = this.get("height");
       var orient = this.get("orient");
       var tickFilter = this.get("tickFilter");
-      var xScaleType = this.get("graph.xScaleType");
-      var uniqueXData = this.get("uniqueXData");
-      var ticks = this.tickFactory(xScale, tickCount, uniqueXData, xScaleType);
+      var ticks = this.get("tickData");
       var y1 = orient === "top" ? height : 0;
       var y2 = y1 + tickLength;
       var labely = orient === "top" ? y1 - tickPadding : y1 + tickPadding;
@@ -3763,17 +3597,8 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
         result = result.filter(tickFilter);
       }
 
-      return result;
-    }).property("tickCount", "xScale", "tickPadding", "tickLength", "height", "orient", "tickFilter", "graph.xScaleType", "uniqueXData"),
-
-    /**
-      Updates the graph's xAxis property on willInsertElement
-      @method _updateGraphXAxis
-      @private
-    */
-    _updateGraphXAxis: (function () {
-      this.set("graph.xAxis", this);
-    }).on("willInsertElement"),
+      return Ember['default'].A(result);
+    }),
 
     /**
       The y position, in pixels, of the axis line
@@ -3781,19 +3606,26 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type Number
       @readonly
     */
-    axisLineY: (function () {
+    axisLineY: Ember['default'].computed("orient", "height", function () {
       var orient = this.get("orient");
       var height = this.get("height");
       return orient === "top" ? height : 0;
-    }).property("orient", "height") });
+    })
+
+  });
 
 });
-define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
+define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph-examples/templates/components/nf-y-axis'], function (exports, Ember, HasGraphParent, RequireScaleSource, layout) {
 
   'use strict';
 
   exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
     tagName: "g",
+
+    layout: layout['default'],
+    template: null,
+
+    useDefaultTemplate: Ember['default'].computed.equal("template", null),
 
     /**
       The number of ticks to display
@@ -3863,12 +3695,12 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
     
       The above example will filter down the set of ticks to only those that are less than 1000.
     */
-    tickFilter: (function (name, value) {
+    tickFilter: Ember['default'].computed(function (name, value) {
       if (arguments.length > 1) {
         this._tickFilter = value;
       }
       return this._tickFilter;
-    }).property(),
+    }),
 
     /**
       computed property. returns true if `orient` is equal to `'right'`.
@@ -3884,11 +3716,11 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       @type String
       @readonly
     */
-    transform: (function () {
+    transform: Ember['default'].computed("x", "y", function () {
       var x = this.get("x");
       var y = this.get("y");
-      return "translate(%@ %@)".fmt(x, y);
-    }).property("x", "y"),
+      return "translate(" + x + " " + y + ")";
+    }),
 
     /**
       The x position of the component
@@ -3896,13 +3728,13 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       @type Number
       @readonly
     */
-    x: (function () {
+    x: Ember['default'].computed("orient", "graph.width", "width", "graph.paddingLeft", "graph.paddingRight", function () {
       var orient = this.get("orient");
       if (orient !== "left") {
         return this.get("graph.width") - this.get("width") - this.get("graph.paddingRight");
       }
       return this.get("graph.paddingLeft");
-    }).property("orient", "graph.width", "width", "graph.paddingLeft", "graph.paddingRight"),
+    }),
 
     /**
       The y position of the component
@@ -3919,6 +3751,12 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       @readonly
     */
     height: Ember['default'].computed.alias("graph.height"),
+
+    init: function init() {
+      this._super.apply(this, arguments);
+      this.set("graph.yAxis", this);
+      Ember['default'].deprecate("Non-block form of tick is deprecated. Please add `as |tick|` to your template.", this.get("template.blockParams"));
+    },
 
     /**
       Function to create the tick values. Can be overriden to provide specific values.
@@ -3940,6 +3778,23 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       return ticks;
     },
 
+    tickData: Ember['default'].computed("graph.yScaleType", "uniqueYData", "yScale", "tickCount", function () {
+      var yScaleType = this.get("graph.yScaleType");
+      if (yScaleType === "ordinal") {
+        return this.get("uniqueYData");
+      } else {
+        var tickCount = this.get("tickCount");
+        var ticks = this.get("yScale").ticks(tickCount);
+        if (yScaleType === "log") {
+          var step = Math.round(ticks.length / tickCount);
+          ticks = ticks.filter(function (tick, i) {
+            return i % step === 0;
+          });
+        }
+        return ticks;
+      }
+    }),
+
     /**
       All y data from the graph, filtered to unique values.
       @property uniqueYData
@@ -3954,17 +3809,14 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       @type Array
       @readonly
     */
-    ticks: (function () {
+    ticks: Ember['default'].computed("yScale", "tickPadding", "axisLineX", "tickLength", "isOrientRight", "tickFilter", function () {
       var yScale = this.get("yScale");
-      var tickCount = this.get("tickCount");
-      var yScaleType = this.get("graph.yScaleType");
       var tickPadding = this.get("tickPadding");
       var axisLineX = this.get("axisLineX");
       var tickLength = this.get("tickLength");
       var isOrientRight = this.get("isOrientRight");
       var tickFilter = this.get("tickFilter");
-      var uniqueYData = this.get("uniqueYData");
-      var ticks = this.tickFactory(yScale, tickCount, uniqueYData, yScaleType);
+      var ticks = this.get("tickData");
       var x1 = isOrientRight ? axisLineX + tickLength : axisLineX - tickLength;
       var x2 = axisLineX;
       var labelx = isOrientRight ? tickLength + tickPadding : axisLineX - tickLength - tickPadding;
@@ -3982,8 +3834,8 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
         result = result.filter(tickFilter);
       }
 
-      return result;
-    }).property("yScale", "tickCount", "graph.yScaleType", "tickPadding", "axisLineX", "tickLength", "isOrientRight", "tickFilter", "uniqueYData"),
+      return Ember['default'].A(result);
+    }),
 
     /**
       The x position of the axis line.
@@ -3991,257 +3843,249 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       @type Number
       @readonly
     */
-    axisLineX: (function () {
+    axisLineX: Ember['default'].computed("isOrientRight", "width", function () {
       return this.get("isOrientRight") ? 0 : this.get("width");
-    }).property("isOrientRight", "width"),
-
-    /**
-      sets graph's yAxis property on willInsertElement
-      @method _updateGraphYAxis
-      @private
-    */
-    _updateGraphYAxis: (function () {
-      this.set("graph.yAxis", this);
-    }).on("willInsertElement")
-  });
+    }) });
 
 });
-define('ember-nf-graph-examples/components/nf-y-diff', ['exports', 'ember', 'ember-cli-nf-graph/mixins/graph-has-graph-parent', 'ember-cli-nf-graph/mixins/graph-requires-scale-source', 'ember-cli-nf-graph/utils/nf/scale-utils'], function (exports, Ember, HasGraphParent, RequireScaleSource, scale_utils) {
+define('ember-nf-graph-examples/components/nf-y-diff', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils'], function (exports, Ember, HasGraphParent, RequireScaleSource, scale_utils) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
-		tagName: "g",
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RequireScaleSource['default'], {
+    tagName: "g",
 
-		attributeBindings: ["transform"],
+    attributeBindings: ["transform"],
 
-		classNameBindings: [":nf-y-diff", "isPositive:positive:negative", "isOrientRight:orient-right:orient-left"],
+    classNameBindings: [":nf-y-diff", "isPositive:positive:negative", "isOrientRight:orient-right:orient-left"],
 
-		/**
-	 	The starting domain value of the difference measurement. The subrahend of the difference calculation.
-	 	@property a
-	 	@type Number
-	 	@default null
-	 */
-		a: null,
+    /**
+      The starting domain value of the difference measurement. The subrahend of the difference calculation.
+      @property a
+      @type Number
+      @default null
+    */
+    a: null,
 
-		/**
-	 	The ending domain value of the difference measurement. The minuend of the difference calculation.
-	 	@property b
-	 	@type Number
-	 	@default null
-	 */
-		b: null,
+    /**
+      The ending domain value of the difference measurement. The minuend of the difference calculation.
+      @property b
+      @type Number
+      @default null
+    */
+    b: null,
 
-		/**
-	 	The amount of padding, in pixels, between the edge of the difference "box" and the content container
-	 	@property contentPadding
-	 	@type Number
-	 	@default 5
-	 */
-		contentPadding: 5,
+    /**
+      The amount of padding, in pixels, between the edge of the difference "box" and the content container
+      @property contentPadding
+      @type Number
+      @default 5
+    */
+    contentPadding: 5,
 
-		/**
-	 	The duration of the transition, in milliseconds, as the difference slides vertically
-	 	@property duration
-	 	@type Number
-	 	@default 400
-	 */
-		duration: 400,
+    /**
+      The duration of the transition, in milliseconds, as the difference slides vertically
+      @property duration
+      @type Number
+      @default 400
+    */
+    duration: 400,
 
-		/**
-	 	The calculated vertical center of the difference box, in pixels.
-	 	@property yCenter
-	 	@type Number
-	 	@readonly
-	 */
-		yCenter: (function () {
-			var yA = +this.get("yA") || 0;
-			var yB = +this.get("yB") || 0;
-			return (yA + yB) / 2;
-		}).property("yA", "yB"),
+    /**
+      The calculated vertical center of the difference box, in pixels.
+      @property yCenter
+      @type Number
+      @readonly
+    */
+    yCenter: Ember['default'].computed("yA", "yB", function () {
+      var yA = +this.get("yA") || 0;
+      var yB = +this.get("yB") || 0;
+      return (yA + yB) / 2;
+    }),
 
-		/**
-	 	The y pixel value of b.
-	 	@property yB
-	 	@type Number
-	 */
-		yB: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("b"));
-		}).property("yScale", "b"),
+    /**
+      The y pixel value of b.
+      @property yB
+      @type Number
+    */
+    yB: Ember['default'].computed("yScale", "b", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("b"));
+    }),
 
-		/**
-	 	The y pixel value of a.
-	 	@property yA
-	 	@type Number
-	 */
-		yA: (function () {
-			return scale_utils.normalizeScale(this.get("yScale"), this.get("a"));
-		}).property("yScale", "a"),
+    /**
+      The y pixel value of a.
+      @property yA
+      @type Number
+    */
+    yA: Ember['default'].computed("yScale", "a", function () {
+      return scale_utils.normalizeScale(this.get("yScale"), this.get("a"));
+    }),
 
-		/**
-	 	The SVG transformation of the component.
-	 	@property transform
-	 	@type String
-	 	@private
-	 	@readonly
-	 */
-		transform: Ember['default'].computed.alias("graph.yAxis.transform"),
+    /**
+      The SVG transformation of the component.
+      @property transform
+      @type String
+      @private
+      @readonly
+    */
+    transform: Ember['default'].computed.alias("graph.yAxis.transform"),
 
-		/**
-	 	The calculated difference between `a` and `b`.
-	 	@property diff
-	 	@type Number
-	 	@readonly
-	 */
-		diff: (function () {
-			return +this.get("b") - this.get("a");
-		}).property("a", "b"),
+    /**
+      The calculated difference between `a` and `b`.
+      @property diff
+      @type Number
+      @readonly
+    */
+    diff: Ember['default'].computed("a", "b", function () {
+      return +this.get("b") - this.get("a");
+    }),
 
-		/**
-	 	Returns `true` if `diff` is a positive number
-	 	@property isPositive
-	 	@type Boolean
-	 	@readonly
-	 */
-		isPositive: Ember['default'].computed.gte("diff", 0),
+    /**
+      Returns `true` if `diff` is a positive number
+      @property isPositive
+      @type Boolean
+      @readonly
+    */
+    isPositive: Ember['default'].computed.gte("diff", 0),
 
-		/**
-	 	Returns `true` if the graph's y-axis component is configured to orient right.
-	 	@property isOrientRight
-	 	@type Boolean
-	 	@readonly
-	 */
-		isOrientRight: Ember['default'].computed.equal("graph.yAxis.orient", "right"),
+    /**
+      Returns `true` if the graph's y-axis component is configured to orient right.
+      @property isOrientRight
+      @type Boolean
+      @readonly
+    */
+    isOrientRight: Ember['default'].computed.equal("graph.yAxis.orient", "right"),
 
-		/**
-	 	The width of the difference box
-	 	@property width
-	 	@type Number
-	 	@readonly
-	 */
-		width: Ember['default'].computed.alias("graph.yAxis.width"),
+    /**
+      The width of the difference box
+      @property width
+      @type Number
+      @readonly
+    */
+    width: Ember['default'].computed.alias("graph.yAxis.width"),
 
-		/**
-	 	The view controller for the view this component is present in
-	 	@property parentController
-	 	@type Ember.Controller
-	 	@private
-	 	@readonly
-	 */
-		parentController: Ember['default'].computed.alias("templateData.view.controller"),
+    /**
+      The view controller for the view this component is present in
+      @property parentController
+      @type Ember.Controller
+      @private
+      @readonly
+    */
+    parentController: Ember['default'].computed.alias("templateData.view.controller"),
 
-		/**
-	 	The x pixel coordinate of the content container.
-	 	@property contentX
-	 	@type Number
-	 	@readonly
-	 */
-		contentX: (function () {
-			var contentPadding = this.get("contentPadding");
-			var width = this.get("width");
-			return this.get("isOrientRight") ? width - contentPadding : contentPadding;
-		}).property("isOrientRight", "width", "contentPadding"),
+    /**
+      The x pixel coordinate of the content container.
+      @property contentX
+      @type Number
+      @readonly
+    */
+    contentX: Ember['default'].computed("isOrientRight", "width", "contentPadding", function () {
+      var contentPadding = this.get("contentPadding");
+      var width = this.get("width");
+      return this.get("isOrientRight") ? width - contentPadding : contentPadding;
+    }),
 
-		rectPath: (function () {
-			var x = 0;
-			var w = +this.get("width") || 0;
-			var x2 = x + w;
-			var yA = +this.get("yA") || 0;
-			var yB = +this.get("yB") || 0;
-			return "M%@1,%@2 L%@1,%@4 L%@3,%@4 L%@3,%@2 L%@1,%@2".fmt(x, yA, x2, yB);
-		}).property("yA", "yB", "width"),
+    rectPath: Ember['default'].computed("yA", "yB", "width", function () {
+      var x = 0;
+      var w = +this.get("width") || 0;
+      var x2 = x + w;
+      var yA = +this.get("yA") || 0;
+      var yB = +this.get("yB") || 0;
+      return "M" + x + "," + yA + " L" + x + "," + yB + " L" + x2 + "," + yB + " L" + x2 + "," + yA + " L" + x + "," + yA;
+    }),
 
-		/**
-	 	The SVG transformation used to position the content container.
-	 	@property contentTransform
-	 	@type String
-	 	@private
-	 	@readonly
-	 */
-		contentTransform: (function () {
-			return "translate(%@ %@)".fmt(this.get("contentX"), this.get("yCenter"));
-		}).property("contentX", "yCenter"),
+    /**
+      The SVG transformation used to position the content container.
+      @property contentTransform
+      @type String
+      @private
+      @readonly
+    */
+    contentTransform: Ember['default'].computed("contentX", "yCenter", function () {
+      var contentX = this.get("contentX");
+      var yCenter = this.get("yCenter");
+      return "translate(" + contentX + " " + yCenter + ")";
+    }),
 
-		/**
-	 	Sets up the d3 related elements when component is inserted 
-	 	into the DOM
-	 	@method didInsertElement
-	 */
-		didInsertElement: function didInsertElement() {
-			var element = this.get("element");
-			var g = d3.select(element);
+    /**
+      Sets up the d3 related elements when component is inserted 
+      into the DOM
+      @method didInsertElement
+    */
+    didInsertElement: function didInsertElement() {
+      var element = this.get("element");
+      var g = d3.select(element);
 
-			var rectPath = this.get("rectPath");
-			var rect = g.insert("path", ":first-child").attr("class", "nf-y-diff-rect").attr("d", rectPath);
+      var rectPath = this.get("rectPath");
+      var rect = g.insert("path", ":first-child").attr("class", "nf-y-diff-rect").attr("d", rectPath);
 
-			var contentTransform = this.get("contentTransform");
-			var content = g.select(".nf-y-diff-content");
-			content.attr("transform", contentTransform);
+      var contentTransform = this.get("contentTransform");
+      var content = g.select(".nf-y-diff-content");
+      content.attr("transform", contentTransform);
 
-			this.set("rectElement", rect);
-			this.set("contentElement", content);
-		},
+      this.set("rectElement", rect);
+      this.set("contentElement", content);
+    },
 
-		/**
-	 	Performs the transition (animation) of the elements.
-	 	@method doTransition
-	 */
-		doTransition: function doTransition() {
-			var duration = this.get("duration");
-			var rectElement = this.get("rectElement");
-			var contentElement = this.get("contentElement");
+    /**
+      Performs the transition (animation) of the elements.
+      @method doTransition
+    */
+    doTransition: function doTransition() {
+      var duration = this.get("duration");
+      var rectElement = this.get("rectElement");
+      var contentElement = this.get("contentElement");
 
-			if (rectElement) {
-				rectElement.transition().duration(duration).attr("d", this.get("rectPath"));
-			}
+      if (rectElement) {
+        rectElement.transition().duration(duration).attr("d", this.get("rectPath"));
+      }
 
-			if (contentElement) {
-				contentElement.transition().duration(duration).attr("transform", this.get("contentTransform"));
-			}
-		},
+      if (contentElement) {
+        contentElement.transition().duration(duration).attr("transform", this.get("contentTransform"));
+      }
+    },
 
-		/**
-	 	Schedules a transition once at afterRender.
-	 	@method transition
-	 */
-		transition: (function () {
-			Ember['default'].run.once(this, this.doTransition);
-		}).observes("a", "b"),
+    /**
+      Schedules a transition once at afterRender.
+      @method transition
+    */
+    transition: Ember['default'].observer("a", "b", function () {
+      Ember['default'].run.once(this, this.doTransition);
+    }),
 
-		/**
-	 	Updates to d3 managed DOM elments that do
-	 	not require transitioning, because they're width-related.
-	 	@method doAdjustWidth
-	 */
-		doAdjustWidth: function doAdjustWidth() {
-			var contentElement = this.get("contentElement");
-			if (contentElement) {
-				var contentTransform = this.get("contentTransform");
-				contentElement.attr("transform", contentTransform);
-			}
-		},
+    /**
+      Updates to d3 managed DOM elments that do
+      not require transitioning, because they're width-related.
+      @method doAdjustWidth
+    */
+    doAdjustWidth: function doAdjustWidth() {
+      var contentElement = this.get("contentElement");
+      if (contentElement) {
+        var contentTransform = this.get("contentTransform");
+        contentElement.attr("transform", contentTransform);
+      }
+    },
 
-		adjustGraphHeight: (function () {
-			var rectElement = this.get("rectElement");
-			var contentElement = this.get("contentElement");
+    adjustGraphHeight: Ember['default'].on("didInsertElement", Ember['default'].observer("graph.graphHeight", function () {
+      var rectElement = this.get("rectElement");
+      var contentElement = this.get("contentElement");
 
-			if (rectElement) {
-				rectElement.attr("d", this.get("rectPath"));
-			}
+      if (rectElement) {
+        rectElement.attr("d", this.get("rectPath"));
+      }
 
-			if (contentElement) {
-				contentElement.attr("transform", this.get("contentTransform"));
-			}
-		}).observes("graph.graphHeight").on("didInsertElement"),
+      if (contentElement) {
+        contentElement.attr("transform", this.get("contentTransform"));
+      }
+    })),
 
-		/**
-	 	Schedules a call to `doAdjustWidth` on afterRender
-	 	@method adjustWidth
-	 */
-		adjustWidth: (function () {
-			Ember['default'].run.once(this, this.doAdjustWidth);
-		}).observes("isOrientRight", "width", "contentPadding").on("didInsertElement") });
+    /**
+      Schedules a call to `doAdjustWidth` on afterRender
+      @method adjustWidth
+    */
+    adjustWidth: Ember['default'].on("didInsertElement", Ember['default'].observer("isOrientRight", "width", "contentPadding", function () {
+      Ember['default'].run.once(this, this.doAdjustWidth);
+    })) });
 
 });
 define('ember-nf-graph-examples/components/stacked-area-graph', ['exports', 'ember', 'ember-nf-graph-examples/services/data-generator'], function (exports, Ember, data_generator) {
@@ -17051,49 +16895,6 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
     var child0 = (function() {
       var child0 = (function() {
         var child0 = (function() {
-          var child0 = (function() {
-            return {
-              isHTMLBars: true,
-              revision: "Ember@1.11.0",
-              blockParams: 0,
-              cachedFragment: null,
-              hasRendered: false,
-              build: function build(dom) {
-                var el0 = dom.createDocumentFragment();
-                var el1 = dom.createTextNode("          ");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createElement("rect");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createTextNode("\n");
-                dom.appendChild(el0, el1);
-                return el0;
-              },
-              render: function render(context, env, contextualElement) {
-                var dom = env.dom;
-                var hooks = env.hooks, get = hooks.get, element = hooks.element;
-                dom.detectNamespace(contextualElement);
-                var fragment;
-                if (env.useFragmentCache && dom.canClone) {
-                  if (this.cachedFragment === null) {
-                    fragment = this.build(dom);
-                    if (this.hasRendered) {
-                      this.cachedFragment = fragment;
-                    } else {
-                      this.hasRendered = true;
-                    }
-                  }
-                  if (this.cachedFragment) {
-                    fragment = dom.cloneNode(this.cachedFragment, true);
-                  }
-                } else {
-                  fragment = this.build(dom);
-                }
-                var element1 = dom.childAt(fragment, [1]);
-                element(env, element1, context, "bind-attr", [], {"x": get(env, context, "lane.x"), "y": get(env, context, "lane.y"), "width": get(env, context, "width"), "height": get(env, context, "lane.height")});
-                return fragment;
-              }
-            };
-          }());
           return {
             isHTMLBars: true,
             revision: "Ember@1.11.0",
@@ -17102,16 +16903,9 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
             hasRendered: false,
             build: function build(dom) {
               var el0 = dom.createDocumentFragment();
-              var el1 = dom.createTextNode("      ");
+              var el1 = dom.createTextNode("          ");
               dom.appendChild(el0, el1);
-              var el1 = dom.createElement("g");
-              dom.setAttribute(el1,"class","nf-grid-lanes");
-              var el2 = dom.createTextNode("\n");
-              dom.appendChild(el1, el2);
-              var el2 = dom.createComment("");
-              dom.appendChild(el1, el2);
-              var el2 = dom.createTextNode("      ");
-              dom.appendChild(el1, el2);
+              var el1 = dom.createElement("rect");
               dom.appendChild(el0, el1);
               var el1 = dom.createTextNode("\n");
               dom.appendChild(el0, el1);
@@ -17119,7 +16913,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
             },
             render: function render(context, env, contextualElement) {
               var dom = env.dom;
-              var hooks = env.hooks, get = hooks.get, block = hooks.block;
+              var hooks = env.hooks, get = hooks.get, element = hooks.element;
               dom.detectNamespace(contextualElement);
               var fragment;
               if (env.useFragmentCache && dom.canClone) {
@@ -17137,101 +16931,8 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
               } else {
                 fragment = this.build(dom);
               }
-              var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),1,1);
-              block(env, morph0, context, "each", [get(env, context, "gridLanes")], {"keyword": "lane"}, child0, null);
-              return fragment;
-            }
-          };
-        }());
-        var child1 = (function() {
-          var child0 = (function() {
-            return {
-              isHTMLBars: true,
-              revision: "Ember@1.11.0",
-              blockParams: 0,
-              cachedFragment: null,
-              hasRendered: false,
-              build: function build(dom) {
-                var el0 = dom.createDocumentFragment();
-                var el1 = dom.createTextNode("          ");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createElement("line");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createTextNode("\n");
-                dom.appendChild(el0, el1);
-                return el0;
-              },
-              render: function render(context, env, contextualElement) {
-                var dom = env.dom;
-                var hooks = env.hooks, get = hooks.get, element = hooks.element;
-                dom.detectNamespace(contextualElement);
-                var fragment;
-                if (env.useFragmentCache && dom.canClone) {
-                  if (this.cachedFragment === null) {
-                    fragment = this.build(dom);
-                    if (this.hasRendered) {
-                      this.cachedFragment = fragment;
-                    } else {
-                      this.hasRendered = true;
-                    }
-                  }
-                  if (this.cachedFragment) {
-                    fragment = dom.cloneNode(this.cachedFragment, true);
-                  }
-                } else {
-                  fragment = this.build(dom);
-                }
-                var element0 = dom.childAt(fragment, [1]);
-                element(env, element0, context, "bind-attr", [], {"x1": get(env, context, "fret.x"), "y1": "0", "x2": get(env, context, "fret.x"), "y2": get(env, context, "height")});
-                return fragment;
-              }
-            };
-          }());
-          return {
-            isHTMLBars: true,
-            revision: "Ember@1.11.0",
-            blockParams: 0,
-            cachedFragment: null,
-            hasRendered: false,
-            build: function build(dom) {
-              var el0 = dom.createDocumentFragment();
-              var el1 = dom.createTextNode("      ");
-              dom.appendChild(el0, el1);
-              var el1 = dom.createElement("g");
-              dom.setAttribute(el1,"class","nf-grid-frets");
-              var el2 = dom.createTextNode("\n");
-              dom.appendChild(el1, el2);
-              var el2 = dom.createComment("");
-              dom.appendChild(el1, el2);
-              var el2 = dom.createTextNode("      ");
-              dom.appendChild(el1, el2);
-              dom.appendChild(el0, el1);
-              var el1 = dom.createTextNode("\n");
-              dom.appendChild(el0, el1);
-              return el0;
-            },
-            render: function render(context, env, contextualElement) {
-              var dom = env.dom;
-              var hooks = env.hooks, get = hooks.get, block = hooks.block;
-              dom.detectNamespace(contextualElement);
-              var fragment;
-              if (env.useFragmentCache && dom.canClone) {
-                if (this.cachedFragment === null) {
-                  fragment = this.build(dom);
-                  if (this.hasRendered) {
-                    this.cachedFragment = fragment;
-                  } else {
-                    this.hasRendered = true;
-                  }
-                }
-                if (this.cachedFragment) {
-                  fragment = dom.cloneNode(this.cachedFragment, true);
-                }
-              } else {
-                fragment = this.build(dom);
-              }
-              var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),1,1);
-              block(env, morph0, context, "each", [get(env, context, "frets")], {"keyword": "fret"}, child0, null);
+              var element1 = dom.childAt(fragment, [1]);
+              element(env, element1, context, "bind-attr", [], {"x": get(env, context, "lane.x"), "y": get(env, context, "lane.y"), "width": get(env, context, "width"), "height": get(env, context, "lane.height")});
               return fragment;
             }
           };
@@ -17244,11 +16945,18 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
           hasRendered: false,
           build: function build(dom) {
             var el0 = dom.createDocumentFragment();
-            var el1 = dom.createComment("");
+            var el1 = dom.createTextNode("      ");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createElement("g");
+            dom.setAttribute(el1,"class","nf-grid-lanes");
+            var el2 = dom.createTextNode("\n");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createComment("");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("      ");
+            dom.appendChild(el1, el2);
             dom.appendChild(el0, el1);
             var el1 = dom.createTextNode("\n");
-            dom.appendChild(el0, el1);
-            var el1 = dom.createComment("");
             dom.appendChild(el0, el1);
             return el0;
           },
@@ -17272,17 +16980,56 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
             } else {
               fragment = this.build(dom);
             }
-            var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
-            var morph1 = dom.createMorphAt(fragment,2,2,contextualElement);
-            dom.insertBoundary(fragment, null);
-            dom.insertBoundary(fragment, 0);
-            block(env, morph0, context, "if", [get(env, context, "graph.showLanes")], {}, child0, null);
-            block(env, morph1, context, "if", [get(env, context, "graph.showFrets")], {}, child1, null);
+            var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),1,1);
+            block(env, morph0, context, "each", [get(env, context, "gridLanes")], {"keyword": "lane"}, child0, null);
             return fragment;
           }
         };
       }());
       var child1 = (function() {
+        var child0 = (function() {
+          return {
+            isHTMLBars: true,
+            revision: "Ember@1.11.0",
+            blockParams: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            build: function build(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("          ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("line");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            render: function render(context, env, contextualElement) {
+              var dom = env.dom;
+              var hooks = env.hooks, get = hooks.get, element = hooks.element;
+              dom.detectNamespace(contextualElement);
+              var fragment;
+              if (env.useFragmentCache && dom.canClone) {
+                if (this.cachedFragment === null) {
+                  fragment = this.build(dom);
+                  if (this.hasRendered) {
+                    this.cachedFragment = fragment;
+                  } else {
+                    this.hasRendered = true;
+                  }
+                }
+                if (this.cachedFragment) {
+                  fragment = dom.cloneNode(this.cachedFragment, true);
+                }
+              } else {
+                fragment = this.build(dom);
+              }
+              var element0 = dom.childAt(fragment, [1]);
+              element(env, element0, context, "bind-attr", [], {"x1": get(env, context, "fret.x"), "y1": "0", "x2": get(env, context, "fret.x"), "y2": get(env, context, "height")});
+              return fragment;
+            }
+          };
+        }());
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
@@ -17291,12 +17038,15 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
           hasRendered: false,
           build: function build(dom) {
             var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("    ");
+            var el1 = dom.createTextNode("      ");
             dom.appendChild(el0, el1);
-            var el1 = dom.createElement("text");
-            dom.setAttribute(el1,"x","0");
-            dom.setAttribute(el1,"y","0");
-            var el2 = dom.createTextNode("No data");
+            var el1 = dom.createElement("g");
+            dom.setAttribute(el1,"class","nf-grid-frets");
+            var el2 = dom.createTextNode("\n");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createComment("");
+            dom.appendChild(el1, el2);
+            var el2 = dom.createTextNode("      ");
             dom.appendChild(el1, el2);
             dom.appendChild(el0, el1);
             var el1 = dom.createTextNode("\n");
@@ -17305,6 +17055,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
           },
           render: function render(context, env, contextualElement) {
             var dom = env.dom;
+            var hooks = env.hooks, get = hooks.get, block = hooks.block;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -17322,6 +17073,8 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
             } else {
               fragment = this.build(dom);
             }
+            var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),1,1);
+            block(env, morph0, context, "each", [get(env, context, "frets")], {"keyword": "fret"}, child0, null);
             return fragment;
           }
         };
@@ -17366,8 +17119,52 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
           var morph1 = dom.createMorphAt(fragment,2,2,contextualElement);
           dom.insertBoundary(fragment, null);
           dom.insertBoundary(fragment, 0);
-          block(env, morph0, context, "if", [get(env, context, "graph.hasData")], {}, child0, null);
-          block(env, morph1, context, "unless", [get(env, context, "graph.hasData")], {}, child1, null);
+          block(env, morph0, context, "if", [get(env, context, "graph.showLanes")], {}, child0, null);
+          block(env, morph1, context, "if", [get(env, context, "graph.showFrets")], {}, child1, null);
+          return fragment;
+        }
+      };
+    }());
+    var child1 = (function() {
+      return {
+        isHTMLBars: true,
+        revision: "Ember@1.11.0",
+        blockParams: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        build: function build(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("    ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createElement("text");
+          dom.setAttribute(el1,"x","0");
+          dom.setAttribute(el1,"y","0");
+          var el2 = dom.createTextNode("No data");
+          dom.appendChild(el1, el2);
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        render: function render(context, env, contextualElement) {
+          var dom = env.dom;
+          dom.detectNamespace(contextualElement);
+          var fragment;
+          if (env.useFragmentCache && dom.canClone) {
+            if (this.cachedFragment === null) {
+              fragment = this.build(dom);
+              if (this.hasRendered) {
+                this.cachedFragment = fragment;
+              } else {
+                this.hasRendered = true;
+              }
+            }
+            if (this.cachedFragment) {
+              fragment = dom.cloneNode(this.cachedFragment, true);
+            }
+          } else {
+            fragment = this.build(dom);
+          }
           return fragment;
         }
       };
@@ -17385,11 +17182,15 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
         dom.setAttribute(el1,"y","0");
         dom.setAttribute(el1,"class","background");
         dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
+        var el1 = dom.createTextNode("\n\n\n");
         dom.appendChild(el0, el1);
         var el1 = dom.createComment("");
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n\n");
         dom.appendChild(el0, el1);
         var el1 = dom.createComment("");
         dom.appendChild(el0, el1);
@@ -17418,10 +17219,12 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
         var element2 = dom.childAt(fragment, [0]);
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         var morph1 = dom.createMorphAt(fragment,4,4,contextualElement);
+        var morph2 = dom.createMorphAt(fragment,6,6,contextualElement);
         dom.insertBoundary(fragment, null);
         element(env, element2, context, "bind-attr", [], {"width": get(env, context, "width"), "height": get(env, context, "height")});
-        block(env, morph0, context, "if", [get(env, context, "graph.hasRendered")], {}, child0, null);
-        content(env, morph1, context, "yield");
+        block(env, morph0, context, "if", [get(env, context, "graph.hasData")], {}, child0, null);
+        block(env, morph1, context, "unless", [get(env, context, "graph.hasData")], {}, child1, null);
+        content(env, morph2, context, "yield");
         return fragment;
       }
     };
@@ -18033,10 +17836,223 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
 
   exports['default'] = Ember.HTMLBars.template((function() {
     var child0 = (function() {
+      var child0 = (function() {
+        var child0 = (function() {
+          var child0 = (function() {
+            return {
+              isHTMLBars: true,
+              revision: "Ember@1.11.0",
+              blockParams: 0,
+              cachedFragment: null,
+              hasRendered: false,
+              build: function build(dom) {
+                var el0 = dom.createDocumentFragment();
+                var el1 = dom.createTextNode("          ");
+                dom.appendChild(el0, el1);
+                var el1 = dom.createElement("text");
+                var el2 = dom.createComment("");
+                dom.appendChild(el1, el2);
+                dom.appendChild(el0, el1);
+                var el1 = dom.createTextNode("\n");
+                dom.appendChild(el0, el1);
+                return el0;
+              },
+              render: function render(context, env, contextualElement) {
+                var dom = env.dom;
+                var hooks = env.hooks, content = hooks.content;
+                dom.detectNamespace(contextualElement);
+                var fragment;
+                if (env.useFragmentCache && dom.canClone) {
+                  if (this.cachedFragment === null) {
+                    fragment = this.build(dom);
+                    if (this.hasRendered) {
+                      this.cachedFragment = fragment;
+                    } else {
+                      this.hasRendered = true;
+                    }
+                  }
+                  if (this.cachedFragment) {
+                    fragment = dom.cloneNode(this.cachedFragment, true);
+                  }
+                } else {
+                  fragment = this.build(dom);
+                }
+                var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+                content(env, morph0, context, "tick.value");
+                return fragment;
+              }
+            };
+          }());
+          var child1 = (function() {
+            return {
+              isHTMLBars: true,
+              revision: "Ember@1.11.0",
+              blockParams: 0,
+              cachedFragment: null,
+              hasRendered: false,
+              build: function build(dom) {
+                var el0 = dom.createDocumentFragment();
+                var el1 = dom.createTextNode("          ");
+                dom.appendChild(el0, el1);
+                var el1 = dom.createComment("");
+                dom.appendChild(el0, el1);
+                var el1 = dom.createTextNode("\n");
+                dom.appendChild(el0, el1);
+                return el0;
+              },
+              render: function render(context, env, contextualElement) {
+                var dom = env.dom;
+                var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+                dom.detectNamespace(contextualElement);
+                var fragment;
+                if (env.useFragmentCache && dom.canClone) {
+                  if (this.cachedFragment === null) {
+                    fragment = this.build(dom);
+                    if (this.hasRendered) {
+                      this.cachedFragment = fragment;
+                    } else {
+                      this.hasRendered = true;
+                    }
+                  }
+                  if (this.cachedFragment) {
+                    fragment = dom.cloneNode(this.cachedFragment, true);
+                  }
+                } else {
+                  fragment = this.build(dom);
+                }
+                var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+                inline(env, morph0, context, "yield", [get(env, context, "tick")], {});
+                return fragment;
+              }
+            };
+          }());
+          return {
+            isHTMLBars: true,
+            revision: "Ember@1.11.0",
+            blockParams: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            build: function build(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createComment("");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            render: function render(context, env, contextualElement) {
+              var dom = env.dom;
+              var hooks = env.hooks, get = hooks.get, block = hooks.block;
+              dom.detectNamespace(contextualElement);
+              var fragment;
+              if (env.useFragmentCache && dom.canClone) {
+                if (this.cachedFragment === null) {
+                  fragment = this.build(dom);
+                  if (this.hasRendered) {
+                    this.cachedFragment = fragment;
+                  } else {
+                    this.hasRendered = true;
+                  }
+                }
+                if (this.cachedFragment) {
+                  fragment = dom.cloneNode(this.cachedFragment, true);
+                }
+              } else {
+                fragment = this.build(dom);
+              }
+              var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+              dom.insertBoundary(fragment, null);
+              dom.insertBoundary(fragment, 0);
+              block(env, morph0, context, "if", [get(env, context, "useDefaultTemplate")], {}, child0, child1);
+              return fragment;
+            }
+          };
+        }());
+        return {
+          isHTMLBars: true,
+          revision: "Ember@1.11.0",
+          blockParams: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          build: function build(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createComment("");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          render: function render(context, env, contextualElement) {
+            var dom = env.dom;
+            var hooks = env.hooks, get = hooks.get, block = hooks.block;
+            dom.detectNamespace(contextualElement);
+            var fragment;
+            if (env.useFragmentCache && dom.canClone) {
+              if (this.cachedFragment === null) {
+                fragment = this.build(dom);
+                if (this.hasRendered) {
+                  this.cachedFragment = fragment;
+                } else {
+                  this.hasRendered = true;
+                }
+              }
+              if (this.cachedFragment) {
+                fragment = dom.cloneNode(this.cachedFragment, true);
+              }
+            } else {
+              fragment = this.build(dom);
+            }
+            var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+            dom.insertBoundary(fragment, null);
+            dom.insertBoundary(fragment, 0);
+            block(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")}, child0, null);
+            return fragment;
+          }
+        };
+      }());
+      var child1 = (function() {
+        return {
+          isHTMLBars: true,
+          revision: "Ember@1.11.0",
+          blockParams: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          build: function build(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("      ");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createComment("");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          render: function render(context, env, contextualElement) {
+            var dom = env.dom;
+            var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+            dom.detectNamespace(contextualElement);
+            var fragment;
+            if (env.useFragmentCache && dom.canClone) {
+              if (this.cachedFragment === null) {
+                fragment = this.build(dom);
+                if (this.hasRendered) {
+                  this.cachedFragment = fragment;
+                } else {
+                  this.hasRendered = true;
+                }
+              }
+              if (this.cachedFragment) {
+                fragment = dom.cloneNode(this.cachedFragment, true);
+              }
+            } else {
+              fragment = this.build(dom);
+            }
+            var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+            inline(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "template": get(env, context, "template"), "x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")});
+            return fragment;
+          }
+        };
+      }());
       return {
         isHTMLBars: true,
         revision: "Ember@1.11.0",
-        blockParams: 0,
+        blockParams: 1,
         cachedFragment: null,
         hasRendered: false,
         build: function build(dom) {
@@ -18045,15 +18061,13 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           dom.appendChild(el0, el1);
           var el1 = dom.createElement("g");
           dom.setAttribute(el1,"class","tick");
-          var el2 = dom.createTextNode("\n  	");
+          var el2 = dom.createTextNode("\n");
           dom.appendChild(el1, el2);
           var el2 = dom.createComment("");
           dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n    ");
+          var el2 = dom.createTextNode("    ");
           dom.appendChild(el1, el2);
           var el2 = dom.createElement("line");
-          var el3 = dom.createTextNode("\n    ");
-          dom.appendChild(el2, el3);
           dom.appendChild(el1, el2);
           var el2 = dom.createTextNode("\n  ");
           dom.appendChild(el1, el2);
@@ -18062,9 +18076,9 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           dom.appendChild(el0, el1);
           return el0;
         },
-        render: function render(context, env, contextualElement) {
+        render: function render(context, env, contextualElement, blockArguments) {
           var dom = env.dom;
-          var hooks = env.hooks, get = hooks.get, inline = hooks.inline, element = hooks.element;
+          var hooks = env.hooks, set = hooks.set, get = hooks.get, block = hooks.block, element = hooks.element;
           dom.detectNamespace(contextualElement);
           var fragment;
           if (env.useFragmentCache && dom.canClone) {
@@ -18085,7 +18099,8 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           var element0 = dom.childAt(fragment, [1]);
           var element1 = dom.childAt(element0, [3]);
           var morph0 = dom.createMorphAt(element0,1,1);
-          inline(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "template": get(env, context, "template"), "x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")});
+          set(env, context, "tick", blockArguments[0]);
+          block(env, morph0, context, "if", [get(env, context, "template.blockParams")], {}, child0, child1);
           element(env, element1, context, "bind-attr", [], {"x1": get(env, context, "tick.x"), "y1": get(env, context, "tick.y1"), "x2": get(env, context, "tick.x"), "y2": get(env, context, "tick.y2")});
           return fragment;
         }
@@ -18101,10 +18116,8 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
         var el0 = dom.createDocumentFragment();
         var el1 = dom.createElement("line");
         dom.setAttribute(el1,"x1","0");
-        var el2 = dom.createTextNode(" ");
-        dom.appendChild(el1, el2);
         dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n\n");
+        var el1 = dom.createTextNode("\n\n");
         dom.appendChild(el0, el1);
         var el1 = dom.createComment("");
         dom.appendChild(el0, el1);
@@ -18134,7 +18147,7 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
         element(env, element2, context, "bind-attr", [], {"y1": get(env, context, "axisLineY"), "x2": get(env, context, "width"), "y2": get(env, context, "axisLineY")});
-        block(env, morph0, context, "each", [get(env, context, "ticks")], {"keyword": "tick"}, child0, null);
+        block(env, morph0, context, "each", [get(env, context, "ticks")], {}, child0, null);
         return fragment;
       }
     };
@@ -18147,10 +18160,223 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
 
   exports['default'] = Ember.HTMLBars.template((function() {
     var child0 = (function() {
+      var child0 = (function() {
+        var child0 = (function() {
+          var child0 = (function() {
+            return {
+              isHTMLBars: true,
+              revision: "Ember@1.11.0",
+              blockParams: 0,
+              cachedFragment: null,
+              hasRendered: false,
+              build: function build(dom) {
+                var el0 = dom.createDocumentFragment();
+                var el1 = dom.createTextNode("          ");
+                dom.appendChild(el0, el1);
+                var el1 = dom.createElement("text");
+                var el2 = dom.createComment("");
+                dom.appendChild(el1, el2);
+                dom.appendChild(el0, el1);
+                var el1 = dom.createTextNode("\n");
+                dom.appendChild(el0, el1);
+                return el0;
+              },
+              render: function render(context, env, contextualElement) {
+                var dom = env.dom;
+                var hooks = env.hooks, content = hooks.content;
+                dom.detectNamespace(contextualElement);
+                var fragment;
+                if (env.useFragmentCache && dom.canClone) {
+                  if (this.cachedFragment === null) {
+                    fragment = this.build(dom);
+                    if (this.hasRendered) {
+                      this.cachedFragment = fragment;
+                    } else {
+                      this.hasRendered = true;
+                    }
+                  }
+                  if (this.cachedFragment) {
+                    fragment = dom.cloneNode(this.cachedFragment, true);
+                  }
+                } else {
+                  fragment = this.build(dom);
+                }
+                var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+                content(env, morph0, context, "tick.value");
+                return fragment;
+              }
+            };
+          }());
+          var child1 = (function() {
+            return {
+              isHTMLBars: true,
+              revision: "Ember@1.11.0",
+              blockParams: 0,
+              cachedFragment: null,
+              hasRendered: false,
+              build: function build(dom) {
+                var el0 = dom.createDocumentFragment();
+                var el1 = dom.createTextNode("          ");
+                dom.appendChild(el0, el1);
+                var el1 = dom.createComment("");
+                dom.appendChild(el0, el1);
+                var el1 = dom.createTextNode("\n");
+                dom.appendChild(el0, el1);
+                return el0;
+              },
+              render: function render(context, env, contextualElement) {
+                var dom = env.dom;
+                var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+                dom.detectNamespace(contextualElement);
+                var fragment;
+                if (env.useFragmentCache && dom.canClone) {
+                  if (this.cachedFragment === null) {
+                    fragment = this.build(dom);
+                    if (this.hasRendered) {
+                      this.cachedFragment = fragment;
+                    } else {
+                      this.hasRendered = true;
+                    }
+                  }
+                  if (this.cachedFragment) {
+                    fragment = dom.cloneNode(this.cachedFragment, true);
+                  }
+                } else {
+                  fragment = this.build(dom);
+                }
+                var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+                inline(env, morph0, context, "yield", [get(env, context, "tick")], {});
+                return fragment;
+              }
+            };
+          }());
+          return {
+            isHTMLBars: true,
+            revision: "Ember@1.11.0",
+            blockParams: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            build: function build(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createComment("");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            render: function render(context, env, contextualElement) {
+              var dom = env.dom;
+              var hooks = env.hooks, get = hooks.get, block = hooks.block;
+              dom.detectNamespace(contextualElement);
+              var fragment;
+              if (env.useFragmentCache && dom.canClone) {
+                if (this.cachedFragment === null) {
+                  fragment = this.build(dom);
+                  if (this.hasRendered) {
+                    this.cachedFragment = fragment;
+                  } else {
+                    this.hasRendered = true;
+                  }
+                }
+                if (this.cachedFragment) {
+                  fragment = dom.cloneNode(this.cachedFragment, true);
+                }
+              } else {
+                fragment = this.build(dom);
+              }
+              var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+              dom.insertBoundary(fragment, null);
+              dom.insertBoundary(fragment, 0);
+              block(env, morph0, context, "if", [get(env, context, "useDefaultTemplate")], {}, child0, child1);
+              return fragment;
+            }
+          };
+        }());
+        return {
+          isHTMLBars: true,
+          revision: "Ember@1.11.0",
+          blockParams: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          build: function build(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createComment("");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          render: function render(context, env, contextualElement) {
+            var dom = env.dom;
+            var hooks = env.hooks, get = hooks.get, block = hooks.block;
+            dom.detectNamespace(contextualElement);
+            var fragment;
+            if (env.useFragmentCache && dom.canClone) {
+              if (this.cachedFragment === null) {
+                fragment = this.build(dom);
+                if (this.hasRendered) {
+                  this.cachedFragment = fragment;
+                } else {
+                  this.hasRendered = true;
+                }
+              }
+              if (this.cachedFragment) {
+                fragment = dom.cloneNode(this.cachedFragment, true);
+              }
+            } else {
+              fragment = this.build(dom);
+            }
+            var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+            dom.insertBoundary(fragment, null);
+            dom.insertBoundary(fragment, 0);
+            block(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")}, child0, null);
+            return fragment;
+          }
+        };
+      }());
+      var child1 = (function() {
+        return {
+          isHTMLBars: true,
+          revision: "Ember@1.11.0",
+          blockParams: 0,
+          cachedFragment: null,
+          hasRendered: false,
+          build: function build(dom) {
+            var el0 = dom.createDocumentFragment();
+            var el1 = dom.createTextNode("      ");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createComment("");
+            dom.appendChild(el0, el1);
+            var el1 = dom.createTextNode("\n");
+            dom.appendChild(el0, el1);
+            return el0;
+          },
+          render: function render(context, env, contextualElement) {
+            var dom = env.dom;
+            var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+            dom.detectNamespace(contextualElement);
+            var fragment;
+            if (env.useFragmentCache && dom.canClone) {
+              if (this.cachedFragment === null) {
+                fragment = this.build(dom);
+                if (this.hasRendered) {
+                  this.cachedFragment = fragment;
+                } else {
+                  this.hasRendered = true;
+                }
+              }
+              if (this.cachedFragment) {
+                fragment = dom.cloneNode(this.cachedFragment, true);
+              }
+            } else {
+              fragment = this.build(dom);
+            }
+            var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+            inline(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "template": get(env, context, "template"), "x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")});
+            return fragment;
+          }
+        };
+      }());
       return {
         isHTMLBars: true,
         revision: "Ember@1.11.0",
-        blockParams: 0,
+        blockParams: 1,
         cachedFragment: null,
         hasRendered: false,
         build: function build(dom) {
@@ -18159,11 +18385,11 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           dom.appendChild(el0, el1);
           var el1 = dom.createElement("g");
           dom.setAttribute(el1,"class","tick");
-          var el2 = dom.createTextNode("\n  	");
+          var el2 = dom.createTextNode("\n");
           dom.appendChild(el1, el2);
           var el2 = dom.createComment("");
           dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("\n    ");
+          var el2 = dom.createTextNode("    ");
           dom.appendChild(el1, el2);
           var el2 = dom.createElement("line");
           dom.appendChild(el1, el2);
@@ -18174,9 +18400,9 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           dom.appendChild(el0, el1);
           return el0;
         },
-        render: function render(context, env, contextualElement) {
+        render: function render(context, env, contextualElement, blockArguments) {
           var dom = env.dom;
-          var hooks = env.hooks, get = hooks.get, inline = hooks.inline, element = hooks.element;
+          var hooks = env.hooks, set = hooks.set, get = hooks.get, block = hooks.block, element = hooks.element;
           dom.detectNamespace(contextualElement);
           var fragment;
           if (env.useFragmentCache && dom.canClone) {
@@ -18197,7 +18423,8 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           var element0 = dom.childAt(fragment, [1]);
           var element1 = dom.childAt(element0, [3]);
           var morph0 = dom.createMorphAt(element0,1,1);
-          inline(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "template": get(env, context, "template"), "x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")});
+          set(env, context, "tick", blockArguments[0]);
+          block(env, morph0, context, "if", [get(env, context, "template.blockParams")], {}, child0, child1);
           element(env, element1, context, "bind-attr", [], {"x1": get(env, context, "tick.x1"), "y1": get(env, context, "tick.y"), "x2": get(env, context, "tick.x2"), "y2": get(env, context, "tick.y")});
           return fragment;
         }
@@ -18243,7 +18470,7 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
         element(env, element2, context, "bind-attr", [], {"x1": get(env, context, "axisLineX"), "y1": "0", "x2": get(env, context, "axisLineX"), "y2": get(env, context, "height")});
-        block(env, morph0, context, "each", [get(env, context, "ticks")], {"keyword": "tick"}, child0, null);
+        block(env, morph0, context, "each", [get(env, context, "ticks")], {}, child0, null);
         return fragment;
       }
     };
@@ -20382,28 +20609,30 @@ define('ember-nf-graph-examples/tests/unit/components/stacked-area-graph-test.js
 });
 define('ember-nf-graph-examples/views/nf-plot', ['exports', 'ember'], function (exports, Ember) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].View.extend({
-		tagName: "g"
-	});
+  exports['default'] = Ember['default'].View.extend({
+    tagName: "g"
+  });
 
 });
 define('ember-nf-graph-examples/views/nf-tick-label', ['exports', 'ember'], function (exports, Ember) {
 
-	'use strict';
+  'use strict';
 
-	exports['default'] = Ember['default'].View.extend({
-		tagName: "g",
+  exports['default'] = Ember['default'].View.extend({
+    tagName: "g",
 
-		attributeBindings: ["transform"],
+    attributeBindings: ["transform"],
 
-		transform: (function () {
-			return "translate(%@ %@)".fmt(this.get("x"), this.get("y"));
-		}).property("x", "y"),
+    transform: Ember['default'].computed("x", "y", function () {
+      var x = this.get("x");
+      var y = this.get("y");
+      return "translate(" + x + " " + y + ")";
+    }),
 
-		className: "nf-tick-label"
-	});
+    className: "nf-tick-label"
+  });
 
 });
 /* jshint ignore:start */
@@ -20434,7 +20663,7 @@ catch(err) {
 if (runningTests) {
   require("ember-nf-graph-examples/tests/test-helper");
 } else {
-  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.9475e622"});
+  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.e15a11ac"});
 }
 
 /* jshint ignore:end */
