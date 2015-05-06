@@ -4478,12 +4478,63 @@ define('ember-nf-graph-examples/templates/application', ['exports'], function (e
         var el0 = dom.createDocumentFragment();
         var el1 = dom.createElement("h2");
         dom.setAttribute(el1,"id","title");
-        var el2 = dom.createTextNode("ember-cli-nf-graph examples:");
+        var el2 = dom.createTextNode("ember-cli-nf-graph examples");
         dom.appendChild(el1, el2);
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n\n");
         dom.appendChild(el0, el1);
         var el1 = dom.createElement("section");
+        var el2 = dom.createTextNode("\n  ");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("h3");
+        var el3 = dom.createTextNode("Resources");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n  ");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("ul");
+        var el3 = dom.createTextNode("\n    ");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createElement("li");
+        var el4 = dom.createElement("a");
+        dom.setAttribute(el4,"href","//github.com/netflix/ember-cli-nf-graph");
+        var el5 = dom.createTextNode("ember-nf-graph source");
+        dom.appendChild(el4, el5);
+        dom.appendChild(el3, el4);
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n    ");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createElement("li");
+        var el4 = dom.createElement("a");
+        dom.setAttribute(el4,"href","//github.com/netflix/ember-nf-graph-examples");
+        var el5 = dom.createTextNode("ember-nf-graph-examples source");
+        dom.appendChild(el4, el5);
+        dom.appendChild(el3, el4);
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n    ");
+        dom.appendChild(el2, el3);
+        var el3 = dom.createElement("li");
+        var el4 = dom.createElement("a");
+        dom.setAttribute(el4,"href","//netflix.github.io/ember-cli-nf-graph/docs/");
+        var el5 = dom.createTextNode("Documentation for nf-graph here");
+        dom.appendChild(el4, el5);
+        dom.appendChild(el3, el4);
+        dom.appendChild(el2, el3);
+        var el3 = dom.createTextNode("\n  ");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
+        var el2 = dom.createTextNode("\n");
+        dom.appendChild(el1, el2);
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n\n");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("section");
+        var el2 = dom.createTextNode("\n");
+        dom.appendChild(el1, el2);
+        var el2 = dom.createElement("h3");
+        var el3 = dom.createTextNode("Contents");
+        dom.appendChild(el2, el3);
+        dom.appendChild(el1, el2);
         var el2 = dom.createTextNode("\n  ");
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("ul");
@@ -4769,15 +4820,15 @@ define('ember-nf-graph-examples/templates/application', ['exports'], function (e
         } else {
           fragment = this.build(dom);
         }
-        var morph0 = dom.createMorphAt(dom.childAt(fragment, [4]),3,3);
-        var morph1 = dom.createMorphAt(dom.childAt(fragment, [6]),3,3);
-        var morph2 = dom.createMorphAt(dom.childAt(fragment, [8]),3,3);
-        var morph3 = dom.createMorphAt(dom.childAt(fragment, [10]),3,3);
-        var morph4 = dom.createMorphAt(dom.childAt(fragment, [12]),3,3);
-        var morph5 = dom.createMorphAt(dom.childAt(fragment, [14]),3,3);
-        var morph6 = dom.createMorphAt(dom.childAt(fragment, [16]),3,3);
-        var morph7 = dom.createMorphAt(dom.childAt(fragment, [18]),3,3);
-        var morph8 = dom.createMorphAt(dom.childAt(fragment, [20]),3,3);
+        var morph0 = dom.createMorphAt(dom.childAt(fragment, [6]),3,3);
+        var morph1 = dom.createMorphAt(dom.childAt(fragment, [8]),3,3);
+        var morph2 = dom.createMorphAt(dom.childAt(fragment, [10]),3,3);
+        var morph3 = dom.createMorphAt(dom.childAt(fragment, [12]),3,3);
+        var morph4 = dom.createMorphAt(dom.childAt(fragment, [14]),3,3);
+        var morph5 = dom.createMorphAt(dom.childAt(fragment, [16]),3,3);
+        var morph6 = dom.createMorphAt(dom.childAt(fragment, [18]),3,3);
+        var morph7 = dom.createMorphAt(dom.childAt(fragment, [20]),3,3);
+        var morph8 = dom.createMorphAt(dom.childAt(fragment, [22]),3,3);
         content(env, morph0, context, "basic-line-graph");
         content(env, morph1, context, "basic-area-graph");
         content(env, morph2, context, "basic-bar-graph");
@@ -20383,7 +20434,7 @@ catch(err) {
 if (runningTests) {
   require("ember-nf-graph-examples/tests/test-helper");
 } else {
-  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.0bb4f669"});
+  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.9475e622"});
 }
 
 /* jshint ignore:end */
