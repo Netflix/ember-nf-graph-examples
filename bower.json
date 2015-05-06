@@ -15,5 +15,10 @@
     "d3": "~3.5.3",
     "rx-ember": "~0.2.3",
     "rxjs": "~2.5.2"
+  },
+  "resolutions": {
+    "ember-qunit": "0.3.0",
+    "ember-data": "1.0.0-beta.16.1",
+    "ember": "1.11.0"
   }
 }

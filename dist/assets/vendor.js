@@ -201,7 +201,7 @@ var runningTests = false;
 })();
 
 ;/*!
- * jQuery JavaScript Library v1.11.2
+ * jQuery JavaScript Library v1.11.3
  * http://jquery.com/
  *
  * Includes Sizzle.js
@@ -211,7 +211,7 @@ var runningTests = false;
  * Released under the MIT license
  * http://jquery.org/license
  *
- * Date: 2014-12-17T15:27Z
+ * Date: 2015-04-28T16:19Z
  */
 
 (function( global, factory ) {
@@ -266,7 +266,7 @@ var support = {};
 
 
 var
-	version = "1.11.2",
+	version = "1.11.3",
 
 	// Define a local copy of jQuery
 	jQuery = function( selector, context ) {
@@ -771,7 +771,12 @@ jQuery.each("Boolean Number String Function Array Date RegExp Object Error".spli
 });
 
 function isArraylike( obj ) {
-	var length = obj.length,
+
+	// Support: iOS 8.2 (not reproducible in simulator)
+	// `in` check used to prevent JIT error (gh-2145)
+	// hasOwn isn't used here due to false negatives
+	// regarding Nodelist length in IE
+	var length = "length" in obj && obj.length,
 		type = jQuery.type( obj );
 
 	if ( type === "function" || jQuery.isWindow( obj ) ) {
