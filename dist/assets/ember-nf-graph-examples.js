@@ -216,6 +216,22 @@ define('ember-nf-graph-examples/components/nf-area-stack', ['exports', 'ember'],
     isAreaStack: true,
 
     /**
+      Whether or not to add the values together to create the stacked area
+      @property aggregate
+      @type {boolean}
+      @default false
+    */
+    aggregate: Ember['default'].computed(function (key, value) {
+      if (arguments.length > 1) {
+        this._aggregate = value;
+      } else if (typeof this._aggregate === "undefined") {
+        Ember['default'].warn("nf-area-stack.aggregate must be set. Currently defaulting to `false` but will default to `true` in the future.");
+        this._aggregate = false;
+      }
+      return this._aggregate;
+    }),
+
+    /**
       The collection of `nf-area` components under this stack.
       @property areas
       @type Array
@@ -308,6 +324,17 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       }
     },
 
+    /**
+      Override from `graph-data-graphic` mixin
+      @method getActualTrackData
+    */
+    getActualTrackData: function getActualTrackData(renderX, renderY, data) {
+      return {
+        x: this.get("xPropFn")(data),
+        y: this.get("yPropFn")(data)
+      };
+    },
+
     _unregister: Ember['default'].on("willDestroyElement", function () {
       var stack = this.get("stack", stack);
       if (stack) {
@@ -323,32 +350,43 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       @type Array
       @readonly
     */
-    nextYData: Ember['default'].computed("renderedData.length", "nextArea.renderedData.@each", function () {
-      var nextData = this.get("nextArea.renderedData") || [];
-      var renderedDataLength = this.get("renderedData.length");
-
-      var result = nextData.map(function (next) {
-        return next[1];
-      });
-
-      while (result.length < renderedDataLength) {
-        result.push(-99999999);
+    nextYData: Ember['default'].computed("data.length", "nextArea.data.@each", function () {
+      var data = this.get("data");
+      if (!Array.isArray(data)) {
+        return [];
       }
-
-      return result;
+      var nextData = this.get("nextArea.mappedData");
+      return data.map(function (d, i) {
+        return nextData && nextData[i] && nextData[i][1] || Number.MIN_VALUE;
+      });
     }),
 
     /**
       The current rendered data "zipped" together with the nextYData.
-      @property areaData
+      @property mappedData
       @type Array
       @readonly
     */
-    areaData: Ember['default'].computed("renderedData.@each", "nextYData.@each", function () {
-      var nextYData = this.get("nextYData");
-      return this.get("renderedData").map(function (r, i) {
-        return [r[0], r[1], nextYData[i]];
-      });
+    mappedData: Ember['default'].computed("data.[]", "xPropFn", "yPropFn", "nextYData.@each", "stack.aggregate", function () {
+      var _getProperties = this.getProperties("data", "xPropFn", "yPropFn", "nextYData");
+
+      var data = _getProperties.data;
+      var xPropFn = _getProperties.xPropFn;
+      var yPropFn = _getProperties.yPropFn;
+      var nextYData = _getProperties.nextYData;
+
+      var aggregate = this.get("stack.aggregate");
+      if (Array.isArray(data)) {
+        return data.map(function (d, i) {
+          var x = xPropFn(d);
+          var y = yPropFn(d);
+          var result = aggregate ? [x, y + nextYData[i], nextYData[i]] : [x, y, nextYData[i]];
+          result.data = d;
+          return result;
+        });
+      } else {
+        return [];
+      }
     }),
 
     /**
@@ -370,9 +408,9 @@ define('ember-nf-graph-examples/components/nf-area', ['exports', 'ember', 'ember
       @type String
       @readonly
     */
-    d: Ember['default'].computed("areaData", "areaFn", function () {
-      var areaData = this.get("areaData");
-      return this.get("areaFn")(areaData);
+    d: Ember['default'].computed("renderedData", "areaFn", function () {
+      var renderedData = this.get("renderedData");
+      return this.get("areaFn")(renderedData);
     }),
 
     click: function click() {
@@ -440,14 +478,16 @@ define('ember-nf-graph-examples/components/nf-bars-group', ['exports', 'ember', 
     } });
 
 });
-define('ember-nf-graph-examples/components/nf-bars', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-registered-graphic', 'ember-nf-graph/utils/parse-property-expression', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/utils/nf/svg-dom'], function (exports, Ember, HasGraphParent, DataGraphic, RegisteredGraphic, parsePropExpr, RequireScaleSource, GraphicWithTrackingDot, scale_utils, svg_dom) {
+define('ember-nf-graph-examples/components/nf-bars', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-registered-graphic', 'ember-nf-graph/utils/parse-property-expression', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/utils/nf/scale-utils', 'ember-nf-graph/utils/nf/svg-dom'], function (exports, Ember, HasGraphParent, DataGraphic, RegisteredGraphic, parsePropExpr, RequireScaleSource, scale_utils, svg_dom) {
 
   'use strict';
 
-  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RegisteredGraphic['default'], DataGraphic['default'], RequireScaleSource['default'], GraphicWithTrackingDot['default'], {
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], RegisteredGraphic['default'], DataGraphic['default'], RequireScaleSource['default'], {
     tagName: "g",
 
     classNames: ["nf-bars"],
+
+    _showTrackingDot: false,
 
     /**
       The name of the property on each data item containing the className for the bar rectangle
@@ -526,31 +566,37 @@ define('ember-nf-graph-examples/components/nf-bars', ['exports', 'ember', 'ember
       @property bars
       @readonly
     */
-    bars: Ember['default'].computed("xScale", "yScale", "renderedData.[]", "graphHeight", "getBarClass", "barWidth", "groupOffsetX", function () {
-      var xScale = this.get("xScale");
-      var yScale = this.get("yScale");
-      var renderedData = this.get("renderedData");
-      var graphHeight = this.get("graphHeight");
-      var getBarClass = this.get("getBarClass");
-      var groupOffsetX = this.get("groupOffsetX");
+    bars: Ember['default'].computed("xScale", "yScale", "renderedData.@each", "graphHeight", "getBarClass", "barWidth", "groupOffsetX", function () {
+      var _getProperties = this.getProperties("renderedData", "xScale", "yScale", "graphHeight", "getBarClass", "groupOffsetX", "barWidth");
+
+      var renderedData = _getProperties.renderedData;
+      var xScale = _getProperties.xScale;
+      var yScale = _getProperties.yScale;
+      var barWidth = _getProperties.barWidth;
+      var graphHeight = _getProperties.graphHeight;
+      var getBarClass = _getProperties.getBarClass;
+      var groupOffsetX = _getProperties.groupOffsetX;
+
+      var getRectPath = this._getRectPath;
 
       if (!xScale || !yScale || !Ember['default'].isArray(renderedData)) {
         return null;
       }
 
-      var w = this.get("barWidth");
+      var w = barWidth;
 
-      return Ember['default'].A(renderedData.map(function (d) {
-        var barClass = "nf-bars-bar" + getBarClass ? " " + getBarClass(d.data) : "";
-        var x = scale_utils.normalizeScale(xScale, d[0]) + groupOffsetX;
-        var y = scale_utils.normalizeScale(yScale, d[1]);
+      return Ember['default'].A(renderedData.map(function (data) {
+        var className = "nf-bars-bar" + (getBarClass ? " " + getBarClass(data.data) : "");
+        var x = scale_utils.normalizeScale(xScale, data[0]) + groupOffsetX;
+        var y = scale_utils.normalizeScale(yScale, data[1]);
         var h = graphHeight - y;
-        return {
-          path: svg_dom.getRectPath(x, y, w, h),
-          className: barClass,
-          data: d };
+        var path = getRectPath(x, y, w, h);
+
+        return { path: path, className: className, data: data };
       }));
     }),
+
+    _getRectPath: svg_dom.getRectPath,
 
     /**
       The name of the action to fire when a bar is clicked.
@@ -980,7 +1026,7 @@ define('ember-nf-graph-examples/components/nf-graph-content', ['exports', 'ember
       var height = this.get("height");
 
       if (!ticks || ticks.length === 0) {
-        return [];
+        return Ember['default'].A();
       }
 
       var sorted = ticks.slice().sort(function (a, b) {
@@ -1067,6 +1113,8 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
 
   'use strict';
 
+  var _slicedToArray = function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { var _arr = []; for (var _iterator = arr[Symbol.iterator](), _step; !(_step = _iterator.next()).done;) { _arr.push(_step.value); if (i && _arr.length === i) break; } return _arr; } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } };
+
   var Observable = Rx.Observable;
 
   var computedBool = Ember['default'].computed.bool;
@@ -1099,7 +1147,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
   };
 
   var domainProperty = function domainProperty(axis) {
-    var dataKey = axis + "Data";
+    var dataKey = axis + "UniqueData";
     var minKey = axis + "Min";
     var maxKey = axis + "Max";
     var scaleTypeKey = axis + "ScaleType";
@@ -1169,6 +1217,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var _ScaleFactory_ = axis + "ScaleFactory";
     var __Min_ = "_" + axis + "Min";
     var _prop_ = axis + "Min";
+    var _autoScaleEvent_ = "didAutoUpdateMin" + axis.toUpperCase();
 
     return Ember['default'].computed(_MinMode_, _DataExtent_, _Axis_tickCount_, _ScaleFactory_, function (key, value) {
       var mode = this.get(_MinMode_);
@@ -1177,9 +1226,12 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       if (arguments.length > 1) {
         this[__Min_] = value;
       } else {
-        var change = (function (val) {
-          this.set(_prop_, val);
-        }).bind(this);
+        var self = this;
+
+        var change = function change(val) {
+          self.set(_prop_, val);
+          self.trigger(_autoScaleEvent_);
+        };
 
         if (mode === "auto") {
           change(this.get(_DataExtent_)[0] || 0);
@@ -1211,6 +1263,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     var _MaxMode_ = axis + "MaxMode";
     var __Max_ = "_" + axis + "Max";
     var _prop_ = axis + "Max";
+    var _autoScaleEvent_ = "didAutoUpdateMax" + axis.toUpperCase();
 
     return Ember['default'].computed(_MaxMode_, _DataExtent_, _ScaleFactory_, _Axis_tickCount_, function (key, value) {
       var mode = this.get(_MaxMode_);
@@ -1219,9 +1272,12 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       if (arguments.length > 1) {
         this[__Max_] = value;
       } else {
-        var change = (function (val) {
-          this.set(_prop_, val);
-        }).bind(this);
+        var self = this;
+
+        var change = function change(val) {
+          self.set(_prop_, val);
+          self.trigger(_autoScaleEvent_);
+        };
 
         if (mode === "auto") {
           change(this.get(_DataExtent_)[1] || 1);
@@ -1264,11 +1320,11 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     ## More advanced example
 
          {{#nf-graph width=500 height=300}}
-           {{#nf-x-axis height="50"}}
+           {{#nf-x-axis height="50" as |tick|}}
              <text>{{tick.value}}</text>
            {{/nf-x-axis}}
-     
-           {{#nf-y-axis width="120"}}
+
+           {{#nf-y-axis width="120" as |tick|}}
              <text>{{tick.value}}</text>
            {{/nf-y-axis}}
      
@@ -1612,14 +1668,112 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     yMaxMode: "auto",
 
     /**
+      The data extents for all data in the registered `graphics`.
+       @property dataExtents
+      @type {Object}
+      @default {
+        xMin: Number.MAX_VALUE,
+        xMax: Number.MIN_VALUE,
+        yMin: Number.MAX_VALUE,
+        yMax: Number.MIN_VALUE
+      }
+    */
+    dataExtents: Ember['default'].computed("graphics.@each.data", function () {
+      var graphics = this.get("graphics");
+      return graphics.reduce(function (c, x) {
+        return c.concat(x.get("mappedData"));
+      }, []).reduce(function (extents, _ref) {
+        var _ref2 = _slicedToArray(_ref, 2);
+
+        var x = _ref2[0];
+        var y = _ref2[1];
+
+        extents.xMin = extents.xMin < x ? extents.xMin : x;
+        extents.xMax = extents.xMax > x ? extents.xMax : x;
+        extents.yMin = extents.yMin < y ? extents.yMin : y;
+        extents.yMax = extents.yMax > y ? extents.yMax : y;
+        return extents;
+      }, {
+        xMin: Number.MAX_VALUE,
+        xMax: Number.MIN_VALUE,
+        yMin: Number.MAX_VALUE,
+        yMax: Number.MIN_VALUE
+      });
+    }),
+
+    /**
+      The action to trigger when the graph automatically updates the xScale 
+      due to an "auto" "push" or "push-tick" domainMode.
+       sends the graph component instance value as the argument.
+       @property autoScaleXAction
+      @type {string}
+      @default null
+    */
+    autoScaleXAction: null,
+
+    _sendAutoUpdateXAction: function _sendAutoUpdateXAction() {
+      this.sendAction("autoScaleXAction", this);
+    },
+
+    _sendAutoUpdateYAction: function _sendAutoUpdateYAction() {
+      this.sendAction("autoScaleYAction", this);
+    },
+
+    /**
+      Event handler that is fired for the `didAutoUpdateMaxX` event
+      @method didAutoUpdateMaxX
+    */
+    didAutoUpdateMaxX: function didAutoUpdateMaxX() {
+      Ember['default'].run.once(this, this._sendAutoUpdateXAction);
+    },
+
+    /**
+      Event handler that is fired for the `didAutoUpdateMinX` event
+      @method didAutoUpdateMinX
+    */
+    didAutoUpdateMinX: function didAutoUpdateMinX() {
+      Ember['default'].run.once(this, this._sendAutoUpdateXAction);
+    },
+
+    /**
+      Event handler that is fired for the `didAutoUpdateMaxY` event
+      @method didAutoUpdateMaxY
+    */
+    didAutoUpdateMaxY: function didAutoUpdateMaxY() {
+      Ember['default'].run.once(this, this._sendAutoUpdateYAction);
+    },
+
+    /**
+      Event handler that is fired for the `didAutoUpdateMinY` event
+      @method didAutoUpdateMinY
+    */
+    didAutoUpdateMinY: function didAutoUpdateMinY() {
+      Ember['default'].run.once(this, this._sendAutoUpdateYAction);
+    },
+
+    /**
+      The action to trigger when the graph automatically updates the yScale 
+      due to an "auto" "push" or "push-tick" domainMode.
+       Sends the graph component instance as the argument.
+       @property autoScaleYAction
+      @type {string}
+      @default null
+    */
+    autoScaleYAction: null,
+
+    /**
       Gets the highest and lowest x values of the graphed data in a two element array.
       @property xDataExtent
       @type Array
       @readonly
     */
-    xDataExtent: Ember['default'].computed("xData", function () {
-      var xData = this.get("xData");
-      return xData ? d3.extent(xData) : [null, null];
+    xDataExtent: Ember['default'].computed("dataExtents", function () {
+      var _get = this.get("dataExtents");
+
+      var xMin = _get.xMin;
+      var xMax = _get.xMax;
+
+      return [xMin, xMax];
     }),
 
     /**
@@ -1628,39 +1782,53 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @type Array
       @readonly
     */
-    yDataExtent: Ember['default'].computed("yData", function () {
-      var yData = this.get("yData");
-      return yData ? d3.extent(yData) : [null, null];
+    yDataExtent: Ember['default'].computed("dataExtents", function () {
+      var _get = this.get("dataExtents");
+
+      var yMin = _get.yMin;
+      var yMax = _get.yMax;
+
+      return [yMin, yMax];
     }),
 
     /**
-      Gets all x data from all graphics.
-      @property xData
+      @property xUniqueData
       @type Array
       @readonly
     */
-    xData: Ember['default'].computed("graphics.@each.xData", function () {
+    xUniqueData: Ember['default'].computed("graphics.@each.mappedData", function () {
       var graphics = this.get("graphics");
-      var all = [];
-      graphics.forEach(function (graphic) {
-        all = all.concat(graphic.get("xData"));
-      });
-      return Ember['default'].A(all);
+      var uniq = graphics.reduce(function (uniq, graphic) {
+        return graphic.get("mappedData").reduce(function (uniq, d) {
+          if (!uniq.some(function (x) {
+            return x === d[0];
+          })) {
+            uniq.push(d[0]);
+          }
+          return uniq;
+        }, uniq);
+      }, []);
+      return Ember['default'].A(uniq);
     }),
 
     /**
-      Gets all y data from all graphics
-      @property yData
+      @property yUniqueData
       @type Array
       @readonly
     */
-    yData: Ember['default'].computed("graphics.@each.yData", function () {
+    yUniqueData: Ember['default'].computed("graphics.@each.mappedData", function () {
       var graphics = this.get("graphics");
-      var all = [];
-      graphics.forEach(function (graphic) {
-        all = all.concat(graphic.get("yData"));
-      });
-      return Ember['default'].A(all);
+      var uniq = graphics.reduce(function (uniq, graphic) {
+        return graphic.get("mappedData").reduce(function (uniq, d) {
+          if (!uniq.some(function (y) {
+            return y === d[1];
+          })) {
+            uniq.push(d[1]);
+          }
+          return uniq;
+        }, uniq);
+      }, []);
+      return Ember['default'].A(uniq);
     }),
 
     /**
@@ -1763,6 +1931,7 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     registerGraphic: function registerGraphic(graphic) {
       var graphics = this.get("graphics");
       graphics.pushObject(graphic);
+      graphic.on("hasData", this, this.updateExtents);
     },
 
     /**
@@ -1771,8 +1940,14 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       @param graphic {Ember.Component} The component to unregister
      */
     unregisterGraphic: function unregisterGraphic(graphic) {
+      graphic.off("hasData", this, this.updateExtents);
       var graphics = this.get("graphics");
       graphics.removeObject(graphic);
+    },
+
+    updateExtents: function updateExtents() {
+      this.get("xDataExtent");
+      this.get("yDataExtent");
     },
 
     /**
@@ -1997,11 +2172,9 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
     brushEndAction: null,
 
     _setupBrushAction: Ember['default'].on("didInsertElement", function () {
-      var content = this.$(".nf-graph-content");
+      var _this = this;
 
-      var toBrushEventStreams = this._toBrushEventStreams.bind(this);
-      var toComponentEventStream = this._toComponentEventStream;
-      var triggerComponentEvent = this._triggerComponentEvent.bind(this);
+      var content = this.$(".nf-graph-content");
 
       var mouseMoves = Observable.fromEvent(content, "mousemove");
       var mouseDowns = Observable.fromEvent(content, "mousedown");
@@ -2015,30 +2188,40 @@ define('ember-nf-graph-examples/components/nf-graph', ['exports', 'ember', 'embe
       })
       // filter out all of them if there are no brush actions registered
       // map the mouse event streams into brush event streams
-      .map(toBrushEventStreams).
+      .map(function (x) {
+        return _this._toBrushEventStreams(x);
+      }).
       // flatten to a stream of action names and event objects
-      flatMap(toComponentEventStream).
+      flatMap(function (x) {
+        return _this._toComponentEventStream(x);
+      }).
       // HACK: this is fairly cosmetic, so skip errors.
       retry().
       // subscribe and send the brush actions via Ember
-      forEach(triggerComponentEvent);
+      subscribe(function (x) {
+        Ember['default'].run(_this, function () {
+          return _this._triggerComponentEvent(x);
+        });
+      });
     }),
 
     _toBrushEventStreams: function _toBrushEventStreams(mouseEvents) {
-      var getStartInfo = this._getStartInfo;
-      var byBrushThreshold = this._byBrushThreshold.bind(this);
-      var toBrushEvent = this._toBrushEvent.bind(this);
+      var _this = this;
 
       // get the starting mouse event
       return mouseEvents.take(1).
       // calculate it's mouse point and info
-      map(getStartInfo).
+      map(this._getStartInfo).
       // combine the start with the each subsequent mouse event
       combineLatest(mouseEvents.skip(1), array_helpers.toArray).
       // filter out everything until the brushThreshold is crossed
-      filter(byBrushThreshold).
+      filter(function (x) {
+        return _this._byBrushThreshold(x);
+      }).
       // create the brush event object
-      map(toBrushEvent);
+      map(function (x) {
+        return _this._toBrushEvent(x);
+      });
     },
 
     _triggerComponentEvent: function _triggerComponentEvent(d) {
@@ -3349,6 +3532,48 @@ define('ember-nf-graph-examples/components/nf-svg-rect', ['exports', 'ember', 'e
   });
 
 });
+define('ember-nf-graph-examples/components/nf-tick-label', ['exports', 'ember'], function (exports, Ember) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend({
+    tagName: "g",
+
+    attributeBindings: ["transform"],
+
+    transform: Ember['default'].computed("x", "y", function () {
+      var x = this.get("x");
+      var y = this.get("y");
+      return "translate(" + x + " " + y + ")";
+    }),
+
+    className: "nf-tick-label"
+  });
+
+});
+define('ember-nf-graph-examples/components/nf-tracker', ['exports', 'ember', 'ember-nf-graph/mixins/graph-data-graphic', 'ember-nf-graph/mixins/graph-requires-scale-source', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-graphic-with-tracking-dot', 'ember-new-computed'], function (exports, Ember, DataGraphic, RequiresScaleSource, HasGraphParent, GraphicWithTrackingDot, computed) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Component.extend(HasGraphParent['default'], DataGraphic['default'], RequiresScaleSource['default'], GraphicWithTrackingDot['default'], {
+    tagName: "g",
+
+    classNameBindings: [":nf-tracker"],
+
+    attributeBindings: ["transform"],
+
+    transform: computed['default']("trackedData.x", "trackedData.y", "xScale", "yScale", {
+      get: function get() {
+        var xScale = this.get("xScale");
+        var yScale = this.get("yScale");
+        var x = xScale && xScale(this.get("trackedData.x") || 0);
+        var y = yScale && yScale(this.get("trackedData.y") || 0);
+        return "translate(" + x + "," + y + ")";
+      }
+    })
+  });
+
+});
 define('ember-nf-graph-examples/components/nf-vertical-line', ['exports', 'ember', 'ember-nf-graph/mixins/graph-has-graph-parent', 'ember-nf-graph/mixins/graph-requires-scale-source'], function (exports, Ember, HasGraphParent, RequireScaleSource) {
 
   'use strict';
@@ -3411,7 +3636,11 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
     layout: layout['default'],
     template: null,
 
-    useDefaultTemplate: Ember['default'].computed.equal("template", null),
+    useTemplate: Ember['default'].computed("hasBlock", "template.blockParams", "hasBlockParams", function () {
+      var preGlimmerCheck = this.get("template.blockParams");
+      var postGlimmerCheck = this.get("hasBlock") && this.get("hasBlockParams");
+      return Boolean(postGlimmerCheck || preGlimmerCheck);
+    }),
 
     attributeBindings: ["transform"],
     classNameBindings: ["orientClass"],
@@ -3468,7 +3697,7 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
       @type Function
       @default null
       @example
-             {{#nf-x-axis tickFilter=myFilter}}
+             {{#nf-x-axis tickFilter=myFilter as |tick|}}
               <text>{{tick.value}}</text>
             {{/nf-x-axis}}
        And on your controller:
@@ -3537,7 +3766,6 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
     init: function init() {
       this._super.apply(this, arguments);
       this.set("graph.xAxis", this);
-      Ember['default'].deprecate("Non-block form of tick is deprecated. Please add `as |tick|` to your template.", this.get("template.blockParams"));
     },
 
     /**
@@ -3548,11 +3776,36 @@ define('ember-nf-graph-examples/components/nf-x-axis', ['exports', 'ember', 'emb
     */
     width: Ember['default'].computed.alias("graph.graphWidth"),
 
-    tickData: Ember['default'].computed("xScale", "graph.xScaleType", "uniqueXData", "tickCount", function () {
-      if (this.get("graph.xScaleType") === "ordinal") {
-        return this.get("uniqueXData");
+    /**
+      A method to call to override the default behavior of how ticks are created.
+       The function signature should match:
+             // - scale: d3.Scale
+            // - tickCount: number of ticks
+            // - uniqueData: unique data points for the axis
+            // - scaleType: string of "linear" or "ordinal"
+            // returns: an array of tick values.
+            function(scale, tickCount, uniqueData, scaleType) {
+              return [100,200,300];
+            }
+       @property tickFactory
+      @type {Function}
+      @default null
+    */
+    tickFactory: null,
+
+    tickData: Ember['default'].computed("xScale", "graph.xScaleType", "uniqueXData", "tickCount", "tickFactory", function () {
+      var tickFactory = this.get("tickFactory");
+      var scale = this.get("xScale");
+      var uniqueData = this.get("uniqueXData");
+      var tickCount = this.get("tickCount");
+      var scaleType = this.get("graph.xScaleType");
+
+      if (tickFactory) {
+        return tickFactory(scale, tickCount, uniqueData, scaleType);
+      } else if (scaleType === "ordinal") {
+        return uniqueData;
       } else {
-        return this.get("xScale").ticks(this.get("tickCount"));
+        return scale.ticks(tickCount);
       }
     }),
 
@@ -3625,7 +3878,11 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
     layout: layout['default'],
     template: null,
 
-    useDefaultTemplate: Ember['default'].computed.equal("template", null),
+    useTemplate: Ember['default'].computed(function () {
+      var preGlimmerCheck = this.get("template.blockParams");
+      var postGlimmerCheck = this.get("hasBlock") && this.get("hasBlockParams");
+      return Boolean(postGlimmerCheck || preGlimmerCheck);
+    }),
 
     /**
       The number of ticks to display
@@ -3682,8 +3939,7 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
       @type Function
       @default null
       @example
-    
-            {{#nf-y-axis tickFilter=myFilter}} 
+             {{#nf-y-axis tickFilter=myFilter as |tick|}}
               <text>{{tick.value}}</text>
             {{/nf-y-axis}}
     
@@ -3755,37 +4011,39 @@ define('ember-nf-graph-examples/components/nf-y-axis', ['exports', 'ember', 'emb
     init: function init() {
       this._super.apply(this, arguments);
       this.set("graph.yAxis", this);
-      Ember['default'].deprecate("Non-block form of tick is deprecated. Please add `as |tick|` to your template.", this.get("template.blockParams"));
     },
 
     /**
-      Function to create the tick values. Can be overriden to provide specific values.
-      @method tickFactory
-      @param yScale {Function} a d3 scale function
-      @param tickCount {Number} the number of ticks desired
-      @param uniqueYData {Array} all y data represented, filted to be unique (used for ordinal cases)
-      @param yScaleType {String} the scale type of the containing graph.
-      @return {Array} an array of domain values at which ticks should be placed.
+      A method to call to override the default behavior of how ticks are created.
+       The function signature should match:
+             // - scale: d3.Scale
+            // - tickCount: number of ticks
+            // - uniqueData: unique data points for the axis
+            // - scaleType: string of "linear" or "ordinal"
+            // returns: an array of tick values.
+            function(scale, tickCount, uniqueData, scaleType) {
+              return [100,200,300];
+            }
+       @property tickFactory
+      @type {Function}
+      @default null
     */
-    tickFactory: function tickFactory(yScale, tickCount, uniqueYData, yScaleType) {
-      var ticks = yScaleType === "ordinal" ? uniqueYData : yScale.ticks(tickCount);
-      if (yScaleType === "log") {
-        var step = Math.round(ticks.length / tickCount);
-        ticks = ticks.filter(function (tick, i) {
-          return i % step === 0;
-        });
-      }
-      return ticks;
-    },
+    tickFactory: null,
 
     tickData: Ember['default'].computed("graph.yScaleType", "uniqueYData", "yScale", "tickCount", function () {
-      var yScaleType = this.get("graph.yScaleType");
-      if (yScaleType === "ordinal") {
-        return this.get("uniqueYData");
+      var tickFactory = this.get("tickFactory");
+      var scale = this.get("yScale");
+      var uniqueData = this.get("uniqueYData");
+      var scaleType = this.get("graph.yScaleType");
+      var tickCount = this.get("tickCount");
+
+      if (tickFactory) {
+        return tickFactory(scale, tickCount, uniqueData, scaleType);
+      } else if (scaleType === "ordinal") {
+        return uniqueData;
       } else {
-        var tickCount = this.get("tickCount");
-        var ticks = this.get("yScale").ticks(tickCount);
-        if (yScaleType === "log") {
+        var ticks = scale.ticks(tickCount);
+        if (scaleType === "log") {
           var step = Math.round(ticks.length / tickCount);
           ticks = ticks.filter(function (tick, i) {
             return i % step === 0;
@@ -4161,10 +4419,26 @@ define('ember-nf-graph-examples/initializers/export-application-global', ['expor
   exports.initialize = initialize;
 
   function initialize(container, application) {
-    var classifiedName = Ember['default'].String.classify(config['default'].modulePrefix);
+    if (config['default'].exportApplicationGlobal !== false) {
+      var value = config['default'].exportApplicationGlobal;
+      var globalName;
 
-    if (config['default'].exportApplicationGlobal && !window[classifiedName]) {
-      window[classifiedName] = application;
+      if (typeof value === "string") {
+        globalName = value;
+      } else {
+        globalName = Ember['default'].String.classify(config['default'].modulePrefix);
+      }
+
+      if (!window[globalName]) {
+        window[globalName] = application;
+
+        application.reopen({
+          willDestroy: function willDestroy() {
+            this._super.apply(this, arguments);
+            delete window[globalName];
+          }
+        });
+      }
     }
   }
 
@@ -10913,7 +11187,7 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
-          blockParams: 0,
+          blockParams: 1,
           cachedFragment: null,
           hasRendered: false,
           build: function build(dom) {
@@ -10928,9 +11202,9 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
             dom.appendChild(el0, el1);
             return el0;
           },
-          render: function render(context, env, contextualElement) {
+          render: function render(context, env, contextualElement, blockArguments) {
             var dom = env.dom;
-            var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+            var hooks = env.hooks, set = hooks.set, get = hooks.get, inline = hooks.inline;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -10949,6 +11223,7 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
               fragment = this.build(dom);
             }
             var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+            set(env, context, "tick", blockArguments[0]);
             inline(env, morph0, context, "format-hour-minute", [get(env, context, "tick.value")], {});
             return fragment;
           }
@@ -10958,7 +11233,7 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
-          blockParams: 0,
+          blockParams: 1,
           cachedFragment: null,
           hasRendered: false,
           build: function build(dom) {
@@ -10973,9 +11248,9 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
             dom.appendChild(el0, el1);
             return el0;
           },
-          render: function render(context, env, contextualElement) {
+          render: function render(context, env, contextualElement, blockArguments) {
             var dom = env.dom;
-            var hooks = env.hooks, content = hooks.content;
+            var hooks = env.hooks, set = hooks.set, content = hooks.content;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -10994,6 +11269,7 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
               fragment = this.build(dom);
             }
             var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+            set(env, context, "tick", blockArguments[0]);
             content(env, morph0, context, "tick.value");
             return fragment;
           }
@@ -11304,7 +11580,7 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
         var el6 = dom.createElement("span");
         dom.setAttribute(el6,"title","Comment");
         dom.setAttribute(el6,"class","comment");
-        var el7 = dom.createTextNode("#nf-x-axis tickCount=5}}");
+        var el7 = dom.createTextNode("#nf-x-axis tickCount=5 as |tick|}}");
         dom.appendChild(el6, el7);
         dom.appendChild(el5, el6);
         var el6 = dom.createElement("span");
@@ -11485,7 +11761,7 @@ define('ember-nf-graph-examples/templates/components/detailed-line-graph', ['exp
         var el6 = dom.createElement("span");
         dom.setAttribute(el6,"title","Comment");
         dom.setAttribute(el6,"class","comment");
-        var el7 = dom.createTextNode("#nf-y-axis}}");
+        var el7 = dom.createTextNode("#nf-y-axis as |tick|}}");
         dom.appendChild(el6, el7);
         dom.appendChild(el5, el6);
         var el6 = dom.createElement("span");
@@ -12553,7 +12829,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
-          blockParams: 0,
+          blockParams: 1,
           cachedFragment: null,
           hasRendered: false,
           build: function build(dom) {
@@ -12568,9 +12844,9 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
             dom.appendChild(el0, el1);
             return el0;
           },
-          render: function render(context, env, contextualElement) {
+          render: function render(context, env, contextualElement, blockArguments) {
             var dom = env.dom;
-            var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+            var hooks = env.hooks, set = hooks.set, get = hooks.get, inline = hooks.inline;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -12589,6 +12865,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
               fragment = this.build(dom);
             }
             var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+            set(env, context, "tick", blockArguments[0]);
             inline(env, morph0, context, "format-hour-minute", [get(env, context, "tick.value")], {});
             return fragment;
           }
@@ -12598,7 +12875,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
-          blockParams: 0,
+          blockParams: 1,
           cachedFragment: null,
           hasRendered: false,
           build: function build(dom) {
@@ -12613,9 +12890,9 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
             dom.appendChild(el0, el1);
             return el0;
           },
-          render: function render(context, env, contextualElement) {
+          render: function render(context, env, contextualElement, blockArguments) {
             var dom = env.dom;
-            var hooks = env.hooks, content = hooks.content;
+            var hooks = env.hooks, set = hooks.set, content = hooks.content;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -12634,6 +12911,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
               fragment = this.build(dom);
             }
             var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+            set(env, context, "tick", blockArguments[0]);
             content(env, morph0, context, "tick.value");
             return fragment;
           }
@@ -12975,7 +13253,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
         var el6 = dom.createElement("span");
         dom.setAttribute(el6,"title","Comment");
         dom.setAttribute(el6,"class","comment");
-        var el7 = dom.createTextNode("#nf-x-axis tickCount=5}}");
+        var el7 = dom.createTextNode("#nf-x-axis tickCount=5 as |tick|}}");
         dom.appendChild(el6, el7);
         dom.appendChild(el5, el6);
         var el6 = dom.createElement("span");
@@ -13156,7 +13434,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
         var el6 = dom.createElement("span");
         dom.setAttribute(el6,"title","Comment");
         dom.setAttribute(el6,"class","comment");
-        var el7 = dom.createTextNode("#nf-y-axis}}");
+        var el7 = dom.createTextNode("#nf-y-axis as |tick|}}");
         dom.appendChild(el6, el7);
         dom.appendChild(el5, el6);
         var el6 = dom.createElement("span");
@@ -14417,7 +14695,7 @@ define('ember-nf-graph-examples/templates/components/mouse-tracking-data', ['exp
         var el2 = dom.createTextNode("\n  ");
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("p");
-        var el3 = dom.createTextNode("\n    {{#nf-y-axis}} draws the Y Axis and has a text template similar to nf-x-axis above.\n  ");
+        var el3 = dom.createTextNode("\n    {{#nf-y-axis as |tick|}} draws the Y Axis and has a text template similar to nf-x-axis above.\n  ");
         dom.appendChild(el2, el3);
         dom.appendChild(el1, el2);
         var el2 = dom.createTextNode("\n  ");
@@ -16574,7 +16852,7 @@ define('ember-nf-graph-examples/templates/components/nf-area', ['exports'], func
             fragment = this.build(dom);
           }
           var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-          inline(env, morph0, context, "nf-dot", [], {"x": get(env, context, "trackedData.x"), "y": get(env, context, "trackedData.y"), "r": get(env, context, "trackingDotRadius"), "multiplierY": get(env, context, "multiplierY"), "multiplierX": get(env, context, "multiplierX")});
+          inline(env, morph0, context, "nf-dot", [], {"x": get(env, context, "trackedData.renderX"), "y": get(env, context, "trackedData.renderY"), "r": get(env, context, "trackingDotRadius")});
           return fragment;
         }
       };
@@ -16598,7 +16876,7 @@ define('ember-nf-graph-examples/templates/components/nf-area', ['exports'], func
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, block = hooks.block;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, block = hooks.block;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -16617,9 +16895,10 @@ define('ember-nf-graph-examples/templates/components/nf-area', ['exports'], func
           fragment = this.build(dom);
         }
         var element0 = dom.childAt(fragment, [0]);
+        var attrMorph0 = dom.createAttrMorph(element0, 'd');
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
-        element(env, element0, context, "bind-attr", [], {"d": get(env, context, "d")});
+        attribute(env, attrMorph0, element0, "d", concat(env, [get(env, context, "d")]));
         block(env, morph0, context, "if", [get(env, context, "showTrackingDot")], {}, child0, null);
         return fragment;
       }
@@ -16651,7 +16930,7 @@ define('ember-nf-graph-examples/templates/components/nf-bars', ['exports'], func
         },
         render: function render(context, env, contextualElement) {
           var dom = env.dom;
-          var hooks = env.hooks, get = hooks.get, element = hooks.element;
+          var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, element = hooks.element;
           dom.detectNamespace(contextualElement);
           var fragment;
           if (env.useFragmentCache && dom.canClone) {
@@ -16670,8 +16949,54 @@ define('ember-nf-graph-examples/templates/components/nf-bars', ['exports'], func
             fragment = this.build(dom);
           }
           var element0 = dom.childAt(fragment, [1]);
-          element(env, element0, context, "bind-attr", [], {"d": get(env, context, "bar.path"), "class": get(env, context, "bar.className")});
+          var attrMorph0 = dom.createAttrMorph(element0, 'd');
+          var attrMorph1 = dom.createAttrMorph(element0, 'class');
+          attribute(env, attrMorph0, element0, "d", concat(env, [get(env, context, "bar.path")]));
+          attribute(env, attrMorph1, element0, "class", concat(env, [get(env, context, "bar.className")]));
           element(env, element0, context, "action", ["nfBarClickBar", get(env, context, "bar.data"), get(env, context, "bar.index")], {});
+          return fragment;
+        }
+      };
+    }());
+    var child1 = (function() {
+      return {
+        isHTMLBars: true,
+        revision: "Ember@1.11.0",
+        blockParams: 0,
+        cachedFragment: null,
+        hasRendered: false,
+        build: function build(dom) {
+          var el0 = dom.createDocumentFragment();
+          var el1 = dom.createTextNode("  ");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createComment("");
+          dom.appendChild(el0, el1);
+          var el1 = dom.createTextNode("\n");
+          dom.appendChild(el0, el1);
+          return el0;
+        },
+        render: function render(context, env, contextualElement) {
+          var dom = env.dom;
+          var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+          dom.detectNamespace(contextualElement);
+          var fragment;
+          if (env.useFragmentCache && dom.canClone) {
+            if (this.cachedFragment === null) {
+              fragment = this.build(dom);
+              if (this.hasRendered) {
+                this.cachedFragment = fragment;
+              } else {
+                this.hasRendered = true;
+              }
+            }
+            if (this.cachedFragment) {
+              fragment = dom.cloneNode(this.cachedFragment, true);
+            }
+          } else {
+            fragment = this.build(dom);
+          }
+          var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+          inline(env, morph0, context, "nf-dot", [], {"x": get(env, context, "trackedData.renderX"), "y": get(env, context, "trackedData.renderY"), "r": get(env, context, "trackingDotRadius")});
           return fragment;
         }
       };
@@ -16684,6 +17009,10 @@ define('ember-nf-graph-examples/templates/components/nf-bars', ['exports'], func
       hasRendered: false,
       build: function build(dom) {
         var el0 = dom.createDocumentFragment();
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
         var el1 = dom.createComment("");
         dom.appendChild(el0, el1);
         return el0;
@@ -16709,9 +17038,11 @@ define('ember-nf-graph-examples/templates/components/nf-bars', ['exports'], func
           fragment = this.build(dom);
         }
         var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+        var morph1 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
         dom.insertBoundary(fragment, 0);
         block(env, morph0, context, "each", [get(env, context, "bars")], {"keyword": "bar"}, child0, null);
+        block(env, morph1, context, "if", [get(env, context, "showTrackingDot")], {}, child1, null);
         return fragment;
       }
     };
@@ -16767,8 +17098,6 @@ define('ember-nf-graph-examples/templates/components/nf-brush-selection', ['expo
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("text");
         dom.setAttribute(el2,"class","nf-brush-selection-left-text");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
         dom.appendChild(el1, el2);
         var el2 = dom.createTextNode("\n");
         dom.appendChild(el1, el2);
@@ -16786,8 +17115,6 @@ define('ember-nf-graph-examples/templates/components/nf-brush-selection', ['expo
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("text");
         dom.setAttribute(el2,"class","nf-brush-selection-right-text");
-        var el3 = dom.createComment("");
-        dom.appendChild(el2, el3);
         dom.appendChild(el1, el2);
         var el2 = dom.createTextNode("\n");
         dom.appendChild(el1, el2);
@@ -16796,7 +17123,7 @@ define('ember-nf-graph-examples/templates/components/nf-brush-selection', ['expo
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, content = hooks.content;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -16818,14 +17145,28 @@ define('ember-nf-graph-examples/templates/components/nf-brush-selection', ['expo
         var element1 = dom.childAt(fragment, [2]);
         var element2 = dom.childAt(fragment, [4]);
         var element3 = dom.childAt(fragment, [6]);
-        var morph0 = dom.createMorphAt(dom.childAt(fragment, [8, 3]),0,0);
-        var morph1 = dom.createMorphAt(dom.childAt(fragment, [10, 3]),0,0);
-        element(env, element0, context, "bind-attr", [], {"width": get(env, context, "leftX"), "height": get(env, context, "graphHeight")});
-        element(env, element1, context, "bind-attr", [], {"x": get(env, context, "rightX"), "width": get(env, context, "rightWidth"), "height": get(env, context, "graphHeight")});
-        element(env, element2, context, "bind-attr", [], {"x1": get(env, context, "leftX"), "x2": get(env, context, "leftX"), "y2": get(env, context, "graphHeight")});
-        element(env, element3, context, "bind-attr", [], {"x1": get(env, context, "rightX"), "x2": get(env, context, "rightX"), "y2": get(env, context, "graphHeight")});
-        content(env, morph0, context, "leftDisplay");
-        content(env, morph1, context, "rightDisplay");
+        var attrMorph0 = dom.createAttrMorph(element0, 'width');
+        var attrMorph1 = dom.createAttrMorph(element0, 'height');
+        var attrMorph2 = dom.createAttrMorph(element1, 'x');
+        var attrMorph3 = dom.createAttrMorph(element1, 'width');
+        var attrMorph4 = dom.createAttrMorph(element1, 'height');
+        var attrMorph5 = dom.createAttrMorph(element2, 'x1');
+        var attrMorph6 = dom.createAttrMorph(element2, 'x2');
+        var attrMorph7 = dom.createAttrMorph(element2, 'y2');
+        var attrMorph8 = dom.createAttrMorph(element3, 'x1');
+        var attrMorph9 = dom.createAttrMorph(element3, 'x2');
+        var attrMorph10 = dom.createAttrMorph(element3, 'y2');
+        attribute(env, attrMorph0, element0, "width", concat(env, [get(env, context, "leftX")]));
+        attribute(env, attrMorph1, element0, "height", concat(env, [get(env, context, "graphHeight")]));
+        attribute(env, attrMorph2, element1, "x", concat(env, [get(env, context, "rightX")]));
+        attribute(env, attrMorph3, element1, "width", concat(env, [get(env, context, "rightWidth")]));
+        attribute(env, attrMorph4, element1, "height", concat(env, [get(env, context, "graphHeight")]));
+        attribute(env, attrMorph5, element2, "x1", concat(env, [get(env, context, "leftX")]));
+        attribute(env, attrMorph6, element2, "x2", concat(env, [get(env, context, "leftX")]));
+        attribute(env, attrMorph7, element2, "y2", concat(env, [get(env, context, "graphHeight")]));
+        attribute(env, attrMorph8, element3, "x1", concat(env, [get(env, context, "rightX")]));
+        attribute(env, attrMorph9, element3, "x2", concat(env, [get(env, context, "rightX")]));
+        attribute(env, attrMorph10, element3, "y2", concat(env, [get(env, context, "graphHeight")]));
         return fragment;
       }
     };
@@ -16847,19 +17188,19 @@ define('ember-nf-graph-examples/templates/components/nf-crosshair', ['exports'],
         var el0 = dom.createDocumentFragment();
         var el1 = dom.createElement("line");
         dom.setAttribute(el1,"class","vertical");
+        dom.setAttribute(el1,"y1","0");
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
         var el1 = dom.createElement("line");
         dom.setAttribute(el1,"class","horizontal");
-        dom.appendChild(el0, el1);
-        var el1 = dom.createTextNode("\n\n");
+        dom.setAttribute(el1,"x1","0");
         dom.appendChild(el0, el1);
         return el0;
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -16879,8 +17220,18 @@ define('ember-nf-graph-examples/templates/components/nf-crosshair', ['exports'],
         }
         var element0 = dom.childAt(fragment, [0]);
         var element1 = dom.childAt(fragment, [2]);
-        element(env, element0, context, "bind-attr", [], {"x1": get(env, context, "x"), "x2": get(env, context, "x"), "y1": "0", "y2": get(env, context, "height")});
-        element(env, element1, context, "bind-attr", [], {"x1": "0", "x2": get(env, context, "width"), "y1": get(env, context, "y"), "y2": get(env, context, "y")});
+        var attrMorph0 = dom.createAttrMorph(element0, 'x1');
+        var attrMorph1 = dom.createAttrMorph(element0, 'x2');
+        var attrMorph2 = dom.createAttrMorph(element0, 'y2');
+        var attrMorph3 = dom.createAttrMorph(element1, 'x2');
+        var attrMorph4 = dom.createAttrMorph(element1, 'y1');
+        var attrMorph5 = dom.createAttrMorph(element1, 'y2');
+        attribute(env, attrMorph0, element0, "x1", concat(env, [get(env, context, "x")]));
+        attribute(env, attrMorph1, element0, "x2", concat(env, [get(env, context, "x")]));
+        attribute(env, attrMorph2, element0, "y2", concat(env, [get(env, context, "height")]));
+        attribute(env, attrMorph3, element1, "x2", concat(env, [get(env, context, "width")]));
+        attribute(env, attrMorph4, element1, "y1", concat(env, [get(env, context, "y")]));
+        attribute(env, attrMorph5, element1, "y2", concat(env, [get(env, context, "y")]));
         return fragment;
       }
     };
@@ -16913,7 +17264,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
             },
             render: function render(context, env, contextualElement) {
               var dom = env.dom;
-              var hooks = env.hooks, get = hooks.get, element = hooks.element;
+              var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute;
               dom.detectNamespace(contextualElement);
               var fragment;
               if (env.useFragmentCache && dom.canClone) {
@@ -16932,7 +17283,14 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
                 fragment = this.build(dom);
               }
               var element1 = dom.childAt(fragment, [1]);
-              element(env, element1, context, "bind-attr", [], {"x": get(env, context, "lane.x"), "y": get(env, context, "lane.y"), "width": get(env, context, "width"), "height": get(env, context, "lane.height")});
+              var attrMorph0 = dom.createAttrMorph(element1, 'x');
+              var attrMorph1 = dom.createAttrMorph(element1, 'y');
+              var attrMorph2 = dom.createAttrMorph(element1, 'width');
+              var attrMorph3 = dom.createAttrMorph(element1, 'height');
+              attribute(env, attrMorph0, element1, "x", concat(env, [get(env, context, "lane.x")]));
+              attribute(env, attrMorph1, element1, "y", concat(env, [get(env, context, "lane.y")]));
+              attribute(env, attrMorph2, element1, "width", concat(env, [get(env, context, "width")]));
+              attribute(env, attrMorph3, element1, "height", concat(env, [get(env, context, "lane.height")]));
               return fragment;
             }
           };
@@ -16999,6 +17357,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
               var el1 = dom.createTextNode("          ");
               dom.appendChild(el0, el1);
               var el1 = dom.createElement("line");
+              dom.setAttribute(el1,"y1","0");
               dom.appendChild(el0, el1);
               var el1 = dom.createTextNode("\n");
               dom.appendChild(el0, el1);
@@ -17006,7 +17365,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
             },
             render: function render(context, env, contextualElement) {
               var dom = env.dom;
-              var hooks = env.hooks, get = hooks.get, element = hooks.element;
+              var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute;
               dom.detectNamespace(contextualElement);
               var fragment;
               if (env.useFragmentCache && dom.canClone) {
@@ -17025,7 +17384,12 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
                 fragment = this.build(dom);
               }
               var element0 = dom.childAt(fragment, [1]);
-              element(env, element0, context, "bind-attr", [], {"x1": get(env, context, "fret.x"), "y1": "0", "x2": get(env, context, "fret.x"), "y2": get(env, context, "height")});
+              var attrMorph0 = dom.createAttrMorph(element0, 'x1');
+              var attrMorph1 = dom.createAttrMorph(element0, 'x2');
+              var attrMorph2 = dom.createAttrMorph(element0, 'y2');
+              attribute(env, attrMorph0, element0, "x1", concat(env, [get(env, context, "fret.x")]));
+              attribute(env, attrMorph1, element0, "x2", concat(env, [get(env, context, "fret.x")]));
+              attribute(env, attrMorph2, element0, "y2", concat(env, [get(env, context, "height")]));
               return fragment;
             }
           };
@@ -17198,7 +17562,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, block = hooks.block, content = hooks.content;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, block = hooks.block, content = hooks.content;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -17217,11 +17581,14 @@ define('ember-nf-graph-examples/templates/components/nf-graph-content', ['export
           fragment = this.build(dom);
         }
         var element2 = dom.childAt(fragment, [0]);
+        var attrMorph0 = dom.createAttrMorph(element2, 'width');
+        var attrMorph1 = dom.createAttrMorph(element2, 'height');
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         var morph1 = dom.createMorphAt(fragment,4,4,contextualElement);
         var morph2 = dom.createMorphAt(fragment,6,6,contextualElement);
         dom.insertBoundary(fragment, null);
-        element(env, element2, context, "bind-attr", [], {"width": get(env, context, "width"), "height": get(env, context, "height")});
+        attribute(env, attrMorph0, element2, "width", concat(env, [get(env, context, "width")]));
+        attribute(env, attrMorph1, element2, "height", concat(env, [get(env, context, "height")]));
         block(env, morph0, context, "if", [get(env, context, "graph.hasData")], {}, child0, null);
         block(env, morph1, context, "unless", [get(env, context, "graph.hasData")], {}, child1, null);
         content(env, morph2, context, "yield");
@@ -17323,7 +17690,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph', ['exports'], fun
         dom.setAttribute(el2,"x","0");
         dom.setAttribute(el2,"y","0");
         dom.appendChild(el1, el2);
-        var el2 = dom.createTextNode("\n  \n  ");
+        var el2 = dom.createTextNode("\n\n  ");
         dom.appendChild(el1, el2);
         var el2 = dom.createComment("");
         dom.appendChild(el1, el2);
@@ -17338,7 +17705,7 @@ define('ember-nf-graph-examples/templates/components/nf-graph', ['exports'], fun
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, content = hooks.content, block = hooks.block;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, content = hooks.content, block = hooks.block;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -17360,13 +17727,23 @@ define('ember-nf-graph-examples/templates/components/nf-graph', ['exports'], fun
         var element1 = dom.childAt(element0, [1, 1]);
         var element2 = dom.childAt(element1, [1]);
         var element3 = dom.childAt(element0, [3]);
+        var attrMorph0 = dom.createAttrMorph(element0, 'width');
+        var attrMorph1 = dom.createAttrMorph(element0, 'height');
+        var attrMorph2 = dom.createAttrMorph(element1, 'id');
+        var attrMorph3 = dom.createAttrMorph(element2, 'width');
+        var attrMorph4 = dom.createAttrMorph(element2, 'height');
+        var attrMorph5 = dom.createAttrMorph(element3, 'width');
+        var attrMorph6 = dom.createAttrMorph(element3, 'height');
         var morph0 = dom.createMorphAt(element0,5,5);
         var morph1 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
-        element(env, element0, context, "bind-attr", [], {"width": get(env, context, "width"), "height": get(env, context, "height")});
-        element(env, element1, context, "bind-attr", [], {"id": get(env, context, "contentClipPathId")});
-        element(env, element2, context, "bind-attr", [], {"width": get(env, context, "graphWidth"), "height": get(env, context, "graphHeight")});
-        element(env, element3, context, "bind-attr", [], {"width": get(env, context, "width"), "height": get(env, context, "height")});
+        attribute(env, attrMorph0, element0, "width", concat(env, [get(env, context, "width")]));
+        attribute(env, attrMorph1, element0, "height", concat(env, [get(env, context, "height")]));
+        attribute(env, attrMorph2, element1, "id", concat(env, [get(env, context, "contentClipPathId")]));
+        attribute(env, attrMorph3, element2, "width", concat(env, [get(env, context, "graphWidth")]));
+        attribute(env, attrMorph4, element2, "height", concat(env, [get(env, context, "graphHeight")]));
+        attribute(env, attrMorph5, element3, "width", concat(env, [get(env, context, "width")]));
+        attribute(env, attrMorph6, element3, "height", concat(env, [get(env, context, "height")]));
         content(env, morph0, context, "yield");
         block(env, morph1, context, "if", [get(env, context, "debug")], {}, child0, null);
         return fragment;
@@ -17400,7 +17777,7 @@ define('ember-nf-graph-examples/templates/components/nf-line', ['exports'], func
         },
         render: function render(context, env, contextualElement) {
           var dom = env.dom;
-          var hooks = env.hooks, get = hooks.get, element = hooks.element;
+          var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute;
           dom.detectNamespace(contextualElement);
           var fragment;
           if (env.useFragmentCache && dom.canClone) {
@@ -17419,7 +17796,8 @@ define('ember-nf-graph-examples/templates/components/nf-line', ['exports'], func
             fragment = this.build(dom);
           }
           var element0 = dom.childAt(fragment, [1]);
-          element(env, element0, context, "bind-attr", [], {"d": get(env, context, "d")});
+          var attrMorph0 = dom.createAttrMorph(element0, 'd');
+          attribute(env, attrMorph0, element0, "d", concat(env, [get(env, context, "d")]));
           return fragment;
         }
       };
@@ -17462,7 +17840,7 @@ define('ember-nf-graph-examples/templates/components/nf-line', ['exports'], func
             fragment = this.build(dom);
           }
           var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-          inline(env, morph0, context, "nf-dot", [], {"x": get(env, context, "trackedData.x"), "y": get(env, context, "trackedData.y"), "r": get(env, context, "trackingDotRadius"), "multiplierY": get(env, context, "multiplierY"), "multiplierX": get(env, context, "multiplierX")});
+          inline(env, morph0, context, "nf-dot", [], {"x": get(env, context, "trackedData.renderX"), "y": get(env, context, "trackedData.renderY"), "r": get(env, context, "trackingDotRadius")});
           return fragment;
         }
       };
@@ -17490,7 +17868,7 @@ define('ember-nf-graph-examples/templates/components/nf-line', ['exports'], func
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, block = hooks.block;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, block = hooks.block;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -17509,10 +17887,11 @@ define('ember-nf-graph-examples/templates/components/nf-line', ['exports'], func
           fragment = this.build(dom);
         }
         var element1 = dom.childAt(fragment, [0]);
+        var attrMorph0 = dom.createAttrMorph(element1, 'd');
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         var morph1 = dom.createMorphAt(fragment,4,4,contextualElement);
         dom.insertBoundary(fragment, null);
-        element(env, element1, context, "bind-attr", [], {"d": get(env, context, "d")});
+        attribute(env, attrMorph0, element1, "d", concat(env, [get(env, context, "d")]));
         block(env, morph0, context, "if", [get(env, context, "selectable")], {}, child0, null);
         block(env, morph1, context, "if", [get(env, context, "showTrackingDot")], {}, child1, null);
         return fragment;
@@ -17678,7 +18057,7 @@ define('ember-nf-graph-examples/templates/components/nf-range-marker', ['exports
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, content = hooks.content;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, content = hooks.content;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -17699,9 +18078,17 @@ define('ember-nf-graph-examples/templates/components/nf-range-marker', ['exports
         var element0 = dom.childAt(fragment, [0]);
         var element1 = dom.childAt(fragment, [2]);
         var morph0 = dom.createMorphAt(element0,0,0);
-        element(env, element0, context, "bind-attr", [], {"transform": get(env, context, "labelTransform")});
+        var attrMorph0 = dom.createAttrMorph(element0, 'transform');
+        var attrMorph1 = dom.createAttrMorph(element1, 'y');
+        var attrMorph2 = dom.createAttrMorph(element1, 'x');
+        var attrMorph3 = dom.createAttrMorph(element1, 'width');
+        var attrMorph4 = dom.createAttrMorph(element1, 'height');
+        attribute(env, attrMorph0, element0, "transform", concat(env, [get(env, context, "labelTransform")]));
         content(env, morph0, context, "yield");
-        element(env, element1, context, "bind-attr", [], {"y": get(env, context, "marginTop"), "x": get(env, context, "x"), "width": get(env, context, "width"), "height": get(env, context, "height")});
+        attribute(env, attrMorph1, element1, "y", concat(env, [get(env, context, "marginTop")]));
+        attribute(env, attrMorph2, element1, "x", concat(env, [get(env, context, "x")]));
+        attribute(env, attrMorph3, element1, "width", concat(env, [get(env, context, "width")]));
+        attribute(env, attrMorph4, element1, "height", concat(env, [get(env, context, "height")]));
         return fragment;
       }
     };
@@ -17722,6 +18109,7 @@ define('ember-nf-graph-examples/templates/components/nf-right-tick', ['exports']
       build: function build(dom) {
         var el0 = dom.createDocumentFragment();
         var el1 = dom.createElement("line");
+        dom.setAttribute(el1,"y1","0");
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
@@ -17732,7 +18120,7 @@ define('ember-nf-graph-examples/templates/components/nf-right-tick', ['exports']
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -17751,7 +18139,12 @@ define('ember-nf-graph-examples/templates/components/nf-right-tick', ['exports']
           fragment = this.build(dom);
         }
         var element0 = dom.childAt(fragment, [0]);
-        element(env, element0, context, "bind-attr", [], {"x1": get(env, context, "graph.width"), "x2": get(env, context, "graph.width"), "y1": "0", "y2": get(env, context, "graph.height")});
+        var attrMorph0 = dom.createAttrMorph(element0, 'x1');
+        var attrMorph1 = dom.createAttrMorph(element0, 'x2');
+        var attrMorph2 = dom.createAttrMorph(element0, 'y2');
+        attribute(env, attrMorph0, element0, "x1", concat(env, [get(env, context, "graph.width")]));
+        attribute(env, attrMorph1, element0, "x2", concat(env, [get(env, context, "graph.width")]));
+        attribute(env, attrMorph2, element0, "y2", concat(env, [get(env, context, "graph.height")]));
         return fragment;
       }
     };
@@ -17830,6 +18223,101 @@ define('ember-nf-graph-examples/templates/components/nf-table-manager', ['export
   }()));
 
 });
+define('ember-nf-graph-examples/templates/components/nf-tick-label', ['exports'], function (exports) {
+
+  'use strict';
+
+  exports['default'] = Ember.HTMLBars.template((function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, content = hooks.content;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+        dom.insertBoundary(fragment, 0);
+        content(env, morph0, context, "yield");
+        return fragment;
+      }
+    };
+  }()));
+
+});
+define('ember-nf-graph-examples/templates/components/nf-tracker', ['exports'], function (exports) {
+
+  'use strict';
+
+  exports['default'] = Ember.HTMLBars.template((function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+        dom.insertBoundary(fragment, null);
+        dom.insertBoundary(fragment, 0);
+        inline(env, morph0, context, "yield", [get(env, context, "trackedData")], {});
+        return fragment;
+      }
+    };
+  }()));
+
+});
 define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], function (exports) {
 
   'use strict';
@@ -17838,94 +18326,6 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
     var child0 = (function() {
       var child0 = (function() {
         var child0 = (function() {
-          var child0 = (function() {
-            return {
-              isHTMLBars: true,
-              revision: "Ember@1.11.0",
-              blockParams: 0,
-              cachedFragment: null,
-              hasRendered: false,
-              build: function build(dom) {
-                var el0 = dom.createDocumentFragment();
-                var el1 = dom.createTextNode("          ");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createElement("text");
-                var el2 = dom.createComment("");
-                dom.appendChild(el1, el2);
-                dom.appendChild(el0, el1);
-                var el1 = dom.createTextNode("\n");
-                dom.appendChild(el0, el1);
-                return el0;
-              },
-              render: function render(context, env, contextualElement) {
-                var dom = env.dom;
-                var hooks = env.hooks, content = hooks.content;
-                dom.detectNamespace(contextualElement);
-                var fragment;
-                if (env.useFragmentCache && dom.canClone) {
-                  if (this.cachedFragment === null) {
-                    fragment = this.build(dom);
-                    if (this.hasRendered) {
-                      this.cachedFragment = fragment;
-                    } else {
-                      this.hasRendered = true;
-                    }
-                  }
-                  if (this.cachedFragment) {
-                    fragment = dom.cloneNode(this.cachedFragment, true);
-                  }
-                } else {
-                  fragment = this.build(dom);
-                }
-                var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
-                content(env, morph0, context, "tick.value");
-                return fragment;
-              }
-            };
-          }());
-          var child1 = (function() {
-            return {
-              isHTMLBars: true,
-              revision: "Ember@1.11.0",
-              blockParams: 0,
-              cachedFragment: null,
-              hasRendered: false,
-              build: function build(dom) {
-                var el0 = dom.createDocumentFragment();
-                var el1 = dom.createTextNode("          ");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createComment("");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createTextNode("\n");
-                dom.appendChild(el0, el1);
-                return el0;
-              },
-              render: function render(context, env, contextualElement) {
-                var dom = env.dom;
-                var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
-                dom.detectNamespace(contextualElement);
-                var fragment;
-                if (env.useFragmentCache && dom.canClone) {
-                  if (this.cachedFragment === null) {
-                    fragment = this.build(dom);
-                    if (this.hasRendered) {
-                      this.cachedFragment = fragment;
-                    } else {
-                      this.hasRendered = true;
-                    }
-                  }
-                  if (this.cachedFragment) {
-                    fragment = dom.cloneNode(this.cachedFragment, true);
-                  }
-                } else {
-                  fragment = this.build(dom);
-                }
-                var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-                inline(env, morph0, context, "yield", [get(env, context, "tick")], {});
-                return fragment;
-              }
-            };
-          }());
           return {
             isHTMLBars: true,
             revision: "Ember@1.11.0",
@@ -17934,13 +18334,17 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
             hasRendered: false,
             build: function build(dom) {
               var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("        ");
+              dom.appendChild(el0, el1);
               var el1 = dom.createComment("");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
               dom.appendChild(el0, el1);
               return el0;
             },
             render: function render(context, env, contextualElement) {
               var dom = env.dom;
-              var hooks = env.hooks, get = hooks.get, block = hooks.block;
+              var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
               dom.detectNamespace(contextualElement);
               var fragment;
               if (env.useFragmentCache && dom.canClone) {
@@ -17958,10 +18362,8 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
               } else {
                 fragment = this.build(dom);
               }
-              var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
-              dom.insertBoundary(fragment, null);
-              dom.insertBoundary(fragment, 0);
-              block(env, morph0, context, "if", [get(env, context, "useDefaultTemplate")], {}, child0, child1);
+              var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+              inline(env, morph0, context, "yield", [get(env, context, "tick")], {});
               return fragment;
             }
           };
@@ -18001,12 +18403,57 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
             var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
             dom.insertBoundary(fragment, null);
             dom.insertBoundary(fragment, 0);
-            block(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")}, child0, null);
+            block(env, morph0, context, "nf-tick-label", [], {"x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")}, child0, null);
             return fragment;
           }
         };
       }());
       var child1 = (function() {
+        var child0 = (function() {
+          return {
+            isHTMLBars: true,
+            revision: "Ember@1.11.0",
+            blockParams: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            build: function build(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("        ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("text");
+              var el2 = dom.createComment("");
+              dom.appendChild(el1, el2);
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            render: function render(context, env, contextualElement) {
+              var dom = env.dom;
+              var hooks = env.hooks, content = hooks.content;
+              dom.detectNamespace(contextualElement);
+              var fragment;
+              if (env.useFragmentCache && dom.canClone) {
+                if (this.cachedFragment === null) {
+                  fragment = this.build(dom);
+                  if (this.hasRendered) {
+                    this.cachedFragment = fragment;
+                  } else {
+                    this.hasRendered = true;
+                  }
+                }
+                if (this.cachedFragment) {
+                  fragment = dom.cloneNode(this.cachedFragment, true);
+                }
+              } else {
+                fragment = this.build(dom);
+              }
+              var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+              content(env, morph0, context, "tick.value");
+              return fragment;
+            }
+          };
+        }());
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
@@ -18015,17 +18462,13 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           hasRendered: false,
           build: function build(dom) {
             var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("      ");
-            dom.appendChild(el0, el1);
             var el1 = dom.createComment("");
-            dom.appendChild(el0, el1);
-            var el1 = dom.createTextNode("\n");
             dom.appendChild(el0, el1);
             return el0;
           },
           render: function render(context, env, contextualElement) {
             var dom = env.dom;
-            var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+            var hooks = env.hooks, get = hooks.get, block = hooks.block;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -18043,8 +18486,10 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
             } else {
               fragment = this.build(dom);
             }
-            var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-            inline(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "template": get(env, context, "template"), "x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")});
+            var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+            dom.insertBoundary(fragment, null);
+            dom.insertBoundary(fragment, 0);
+            block(env, morph0, context, "nf-tick-label", [], {"x": get(env, context, "tick.x"), "y": get(env, context, "tick.labely")}, child0, null);
             return fragment;
           }
         };
@@ -18065,7 +18510,7 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           dom.appendChild(el1, el2);
           var el2 = dom.createComment("");
           dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("    ");
+          var el2 = dom.createTextNode("\n    ");
           dom.appendChild(el1, el2);
           var el2 = dom.createElement("line");
           dom.appendChild(el1, el2);
@@ -18078,7 +18523,7 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
         },
         render: function render(context, env, contextualElement, blockArguments) {
           var dom = env.dom;
-          var hooks = env.hooks, set = hooks.set, get = hooks.get, block = hooks.block, element = hooks.element;
+          var hooks = env.hooks, set = hooks.set, get = hooks.get, block = hooks.block, concat = hooks.concat, attribute = hooks.attribute;
           dom.detectNamespace(contextualElement);
           var fragment;
           if (env.useFragmentCache && dom.canClone) {
@@ -18099,9 +18544,16 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           var element0 = dom.childAt(fragment, [1]);
           var element1 = dom.childAt(element0, [3]);
           var morph0 = dom.createMorphAt(element0,1,1);
+          var attrMorph0 = dom.createAttrMorph(element1, 'x1');
+          var attrMorph1 = dom.createAttrMorph(element1, 'y1');
+          var attrMorph2 = dom.createAttrMorph(element1, 'x2');
+          var attrMorph3 = dom.createAttrMorph(element1, 'y2');
           set(env, context, "tick", blockArguments[0]);
-          block(env, morph0, context, "if", [get(env, context, "template.blockParams")], {}, child0, child1);
-          element(env, element1, context, "bind-attr", [], {"x1": get(env, context, "tick.x"), "y1": get(env, context, "tick.y1"), "x2": get(env, context, "tick.x"), "y2": get(env, context, "tick.y2")});
+          block(env, morph0, context, "if", [get(env, context, "useTemplate")], {}, child0, child1);
+          attribute(env, attrMorph0, element1, "x1", concat(env, [get(env, context, "tick.x")]));
+          attribute(env, attrMorph1, element1, "y1", concat(env, [get(env, context, "tick.y1")]));
+          attribute(env, attrMorph2, element1, "x2", concat(env, [get(env, context, "tick.x")]));
+          attribute(env, attrMorph3, element1, "y2", concat(env, [get(env, context, "tick.y2")]));
           return fragment;
         }
       };
@@ -18125,7 +18577,7 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, block = hooks.block;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, block = hooks.block;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -18144,9 +18596,14 @@ define('ember-nf-graph-examples/templates/components/nf-x-axis', ['exports'], fu
           fragment = this.build(dom);
         }
         var element2 = dom.childAt(fragment, [0]);
+        var attrMorph0 = dom.createAttrMorph(element2, 'y1');
+        var attrMorph1 = dom.createAttrMorph(element2, 'x2');
+        var attrMorph2 = dom.createAttrMorph(element2, 'y2');
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
-        element(env, element2, context, "bind-attr", [], {"y1": get(env, context, "axisLineY"), "x2": get(env, context, "width"), "y2": get(env, context, "axisLineY")});
+        attribute(env, attrMorph0, element2, "y1", concat(env, [get(env, context, "axisLineY")]));
+        attribute(env, attrMorph1, element2, "x2", concat(env, [get(env, context, "width")]));
+        attribute(env, attrMorph2, element2, "y2", concat(env, [get(env, context, "axisLineY")]));
         block(env, morph0, context, "each", [get(env, context, "ticks")], {}, child0, null);
         return fragment;
       }
@@ -18162,94 +18619,6 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
     var child0 = (function() {
       var child0 = (function() {
         var child0 = (function() {
-          var child0 = (function() {
-            return {
-              isHTMLBars: true,
-              revision: "Ember@1.11.0",
-              blockParams: 0,
-              cachedFragment: null,
-              hasRendered: false,
-              build: function build(dom) {
-                var el0 = dom.createDocumentFragment();
-                var el1 = dom.createTextNode("          ");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createElement("text");
-                var el2 = dom.createComment("");
-                dom.appendChild(el1, el2);
-                dom.appendChild(el0, el1);
-                var el1 = dom.createTextNode("\n");
-                dom.appendChild(el0, el1);
-                return el0;
-              },
-              render: function render(context, env, contextualElement) {
-                var dom = env.dom;
-                var hooks = env.hooks, content = hooks.content;
-                dom.detectNamespace(contextualElement);
-                var fragment;
-                if (env.useFragmentCache && dom.canClone) {
-                  if (this.cachedFragment === null) {
-                    fragment = this.build(dom);
-                    if (this.hasRendered) {
-                      this.cachedFragment = fragment;
-                    } else {
-                      this.hasRendered = true;
-                    }
-                  }
-                  if (this.cachedFragment) {
-                    fragment = dom.cloneNode(this.cachedFragment, true);
-                  }
-                } else {
-                  fragment = this.build(dom);
-                }
-                var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
-                content(env, morph0, context, "tick.value");
-                return fragment;
-              }
-            };
-          }());
-          var child1 = (function() {
-            return {
-              isHTMLBars: true,
-              revision: "Ember@1.11.0",
-              blockParams: 0,
-              cachedFragment: null,
-              hasRendered: false,
-              build: function build(dom) {
-                var el0 = dom.createDocumentFragment();
-                var el1 = dom.createTextNode("          ");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createComment("");
-                dom.appendChild(el0, el1);
-                var el1 = dom.createTextNode("\n");
-                dom.appendChild(el0, el1);
-                return el0;
-              },
-              render: function render(context, env, contextualElement) {
-                var dom = env.dom;
-                var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
-                dom.detectNamespace(contextualElement);
-                var fragment;
-                if (env.useFragmentCache && dom.canClone) {
-                  if (this.cachedFragment === null) {
-                    fragment = this.build(dom);
-                    if (this.hasRendered) {
-                      this.cachedFragment = fragment;
-                    } else {
-                      this.hasRendered = true;
-                    }
-                  }
-                  if (this.cachedFragment) {
-                    fragment = dom.cloneNode(this.cachedFragment, true);
-                  }
-                } else {
-                  fragment = this.build(dom);
-                }
-                var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-                inline(env, morph0, context, "yield", [get(env, context, "tick")], {});
-                return fragment;
-              }
-            };
-          }());
           return {
             isHTMLBars: true,
             revision: "Ember@1.11.0",
@@ -18258,13 +18627,17 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
             hasRendered: false,
             build: function build(dom) {
               var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("        ");
+              dom.appendChild(el0, el1);
               var el1 = dom.createComment("");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
               dom.appendChild(el0, el1);
               return el0;
             },
             render: function render(context, env, contextualElement) {
               var dom = env.dom;
-              var hooks = env.hooks, get = hooks.get, block = hooks.block;
+              var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
               dom.detectNamespace(contextualElement);
               var fragment;
               if (env.useFragmentCache && dom.canClone) {
@@ -18282,10 +18655,8 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
               } else {
                 fragment = this.build(dom);
               }
-              var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
-              dom.insertBoundary(fragment, null);
-              dom.insertBoundary(fragment, 0);
-              block(env, morph0, context, "if", [get(env, context, "useDefaultTemplate")], {}, child0, child1);
+              var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+              inline(env, morph0, context, "yield", [get(env, context, "tick")], {});
               return fragment;
             }
           };
@@ -18325,12 +18696,57 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
             var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
             dom.insertBoundary(fragment, null);
             dom.insertBoundary(fragment, 0);
-            block(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")}, child0, null);
+            block(env, morph0, context, "nf-tick-label", [], {"x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")}, child0, null);
             return fragment;
           }
         };
       }());
       var child1 = (function() {
+        var child0 = (function() {
+          return {
+            isHTMLBars: true,
+            revision: "Ember@1.11.0",
+            blockParams: 0,
+            cachedFragment: null,
+            hasRendered: false,
+            build: function build(dom) {
+              var el0 = dom.createDocumentFragment();
+              var el1 = dom.createTextNode("        ");
+              dom.appendChild(el0, el1);
+              var el1 = dom.createElement("text");
+              var el2 = dom.createComment("");
+              dom.appendChild(el1, el2);
+              dom.appendChild(el0, el1);
+              var el1 = dom.createTextNode("\n");
+              dom.appendChild(el0, el1);
+              return el0;
+            },
+            render: function render(context, env, contextualElement) {
+              var dom = env.dom;
+              var hooks = env.hooks, content = hooks.content;
+              dom.detectNamespace(contextualElement);
+              var fragment;
+              if (env.useFragmentCache && dom.canClone) {
+                if (this.cachedFragment === null) {
+                  fragment = this.build(dom);
+                  if (this.hasRendered) {
+                    this.cachedFragment = fragment;
+                  } else {
+                    this.hasRendered = true;
+                  }
+                }
+                if (this.cachedFragment) {
+                  fragment = dom.cloneNode(this.cachedFragment, true);
+                }
+              } else {
+                fragment = this.build(dom);
+              }
+              var morph0 = dom.createMorphAt(dom.childAt(fragment, [1]),0,0);
+              content(env, morph0, context, "tick.value");
+              return fragment;
+            }
+          };
+        }());
         return {
           isHTMLBars: true,
           revision: "Ember@1.11.0",
@@ -18339,17 +18755,13 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           hasRendered: false,
           build: function build(dom) {
             var el0 = dom.createDocumentFragment();
-            var el1 = dom.createTextNode("      ");
-            dom.appendChild(el0, el1);
             var el1 = dom.createComment("");
-            dom.appendChild(el0, el1);
-            var el1 = dom.createTextNode("\n");
             dom.appendChild(el0, el1);
             return el0;
           },
           render: function render(context, env, contextualElement) {
             var dom = env.dom;
-            var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+            var hooks = env.hooks, get = hooks.get, block = hooks.block;
             dom.detectNamespace(contextualElement);
             var fragment;
             if (env.useFragmentCache && dom.canClone) {
@@ -18367,8 +18779,10 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
             } else {
               fragment = this.build(dom);
             }
-            var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-            inline(env, morph0, context, "view", ["nf-tick-label"], {"controller": get(env, context, "graph.parentController"), "template": get(env, context, "template"), "x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")});
+            var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+            dom.insertBoundary(fragment, null);
+            dom.insertBoundary(fragment, 0);
+            block(env, morph0, context, "nf-tick-label", [], {"x": get(env, context, "tick.labelx"), "y": get(env, context, "tick.y")}, child0, null);
             return fragment;
           }
         };
@@ -18389,7 +18803,7 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           dom.appendChild(el1, el2);
           var el2 = dom.createComment("");
           dom.appendChild(el1, el2);
-          var el2 = dom.createTextNode("    ");
+          var el2 = dom.createTextNode("\n    ");
           dom.appendChild(el1, el2);
           var el2 = dom.createElement("line");
           dom.appendChild(el1, el2);
@@ -18402,7 +18816,7 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
         },
         render: function render(context, env, contextualElement, blockArguments) {
           var dom = env.dom;
-          var hooks = env.hooks, set = hooks.set, get = hooks.get, block = hooks.block, element = hooks.element;
+          var hooks = env.hooks, set = hooks.set, get = hooks.get, block = hooks.block, concat = hooks.concat, attribute = hooks.attribute;
           dom.detectNamespace(contextualElement);
           var fragment;
           if (env.useFragmentCache && dom.canClone) {
@@ -18423,9 +18837,16 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           var element0 = dom.childAt(fragment, [1]);
           var element1 = dom.childAt(element0, [3]);
           var morph0 = dom.createMorphAt(element0,1,1);
+          var attrMorph0 = dom.createAttrMorph(element1, 'x1');
+          var attrMorph1 = dom.createAttrMorph(element1, 'y1');
+          var attrMorph2 = dom.createAttrMorph(element1, 'x2');
+          var attrMorph3 = dom.createAttrMorph(element1, 'y2');
           set(env, context, "tick", blockArguments[0]);
-          block(env, morph0, context, "if", [get(env, context, "template.blockParams")], {}, child0, child1);
-          element(env, element1, context, "bind-attr", [], {"x1": get(env, context, "tick.x1"), "y1": get(env, context, "tick.y"), "x2": get(env, context, "tick.x2"), "y2": get(env, context, "tick.y")});
+          block(env, morph0, context, "if", [get(env, context, "useTemplate")], {}, child0, child1);
+          attribute(env, attrMorph0, element1, "x1", concat(env, [get(env, context, "tick.x1")]));
+          attribute(env, attrMorph1, element1, "y1", concat(env, [get(env, context, "tick.y")]));
+          attribute(env, attrMorph2, element1, "x2", concat(env, [get(env, context, "tick.x2")]));
+          attribute(env, attrMorph3, element1, "y2", concat(env, [get(env, context, "tick.y")]));
           return fragment;
         }
       };
@@ -18439,6 +18860,7 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
       build: function build(dom) {
         var el0 = dom.createDocumentFragment();
         var el1 = dom.createElement("line");
+        dom.setAttribute(el1,"y1","0");
         dom.appendChild(el0, el1);
         var el1 = dom.createTextNode("\n\n");
         dom.appendChild(el0, el1);
@@ -18448,7 +18870,7 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
       },
       render: function render(context, env, contextualElement) {
         var dom = env.dom;
-        var hooks = env.hooks, get = hooks.get, element = hooks.element, block = hooks.block;
+        var hooks = env.hooks, get = hooks.get, concat = hooks.concat, attribute = hooks.attribute, block = hooks.block;
         dom.detectNamespace(contextualElement);
         var fragment;
         if (env.useFragmentCache && dom.canClone) {
@@ -18467,9 +18889,14 @@ define('ember-nf-graph-examples/templates/components/nf-y-axis', ['exports'], fu
           fragment = this.build(dom);
         }
         var element2 = dom.childAt(fragment, [0]);
+        var attrMorph0 = dom.createAttrMorph(element2, 'x1');
+        var attrMorph1 = dom.createAttrMorph(element2, 'x2');
+        var attrMorph2 = dom.createAttrMorph(element2, 'y2');
         var morph0 = dom.createMorphAt(fragment,2,2,contextualElement);
         dom.insertBoundary(fragment, null);
-        element(env, element2, context, "bind-attr", [], {"x1": get(env, context, "axisLineX"), "y1": "0", "x2": get(env, context, "axisLineX"), "y2": get(env, context, "height")});
+        attribute(env, attrMorph0, element2, "x1", concat(env, [get(env, context, "axisLineX")]));
+        attribute(env, attrMorph1, element2, "x2", concat(env, [get(env, context, "axisLineX")]));
+        attribute(env, attrMorph2, element2, "y2", concat(env, [get(env, context, "height")]));
         block(env, morph0, context, "each", [get(env, context, "ticks")], {}, child0, null);
         return fragment;
       }
@@ -18628,7 +19055,7 @@ define('ember-nf-graph-examples/templates/components/stacked-area-graph', ['expo
               fragment = this.build(dom);
             }
             var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
-            block(env, morph0, context, "nf-area-stack", [], {}, child0, null);
+            block(env, morph0, context, "nf-area-stack", [], {"aggregate": 0}, child0, null);
             return fragment;
           }
         };
@@ -18833,7 +19260,7 @@ define('ember-nf-graph-examples/templates/components/stacked-area-graph', ['expo
         var el6 = dom.createElement("span");
         dom.setAttribute(el6,"title","Comment");
         dom.setAttribute(el6,"class","comment");
-        var el7 = dom.createTextNode("#nf-area-stack}}");
+        var el7 = dom.createTextNode("#nf-area-stack aggregate=0}}");
         dom.appendChild(el6, el7);
         dom.appendChild(el5, el6);
         var el6 = dom.createElement("span");
@@ -20607,34 +21034,6 @@ define('ember-nf-graph-examples/tests/unit/components/stacked-area-graph-test.js
   });
 
 });
-define('ember-nf-graph-examples/views/nf-plot', ['exports', 'ember'], function (exports, Ember) {
-
-  'use strict';
-
-  exports['default'] = Ember['default'].View.extend({
-    tagName: "g"
-  });
-
-});
-define('ember-nf-graph-examples/views/nf-tick-label', ['exports', 'ember'], function (exports, Ember) {
-
-  'use strict';
-
-  exports['default'] = Ember['default'].View.extend({
-    tagName: "g",
-
-    attributeBindings: ["transform"],
-
-    transform: Ember['default'].computed("x", "y", function () {
-      var x = this.get("x");
-      var y = this.get("y");
-      return "translate(" + x + " " + y + ")";
-    }),
-
-    className: "nf-tick-label"
-  });
-
-});
 /* jshint ignore:start */
 
 /* jshint ignore:end */
@@ -20663,7 +21062,7 @@ catch(err) {
 if (runningTests) {
   require("ember-nf-graph-examples/tests/test-helper");
 } else {
-  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.81c9e87f"});
+  require("ember-nf-graph-examples/app")["default"].create({"name":"ember-nf-graph-examples","version":"0.0.0.e2e707a2"});
 }
 
 /* jshint ignore:end */

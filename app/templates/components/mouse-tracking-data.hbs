@@ -6,11 +6,11 @@
     paddingTop=10
     paddingRight=10}}
 
-  {{#nf-x-axis tickCount=5}}
+  {{#nf-x-axis tickCount=5 as |tick|}}
     <text>{{format-hour-minute tick.value}}</text>
   {{/nf-x-axis}}
 
-  {{#nf-y-axis}}
+  {{#nf-y-axis as |tick|}}
     <text>{{tick.value}}</text>
   {{/nf-y-axis}}
 
@@ -73,11 +73,11 @@
     </span><span title="Ident">paddingTop</span><span title="Operator">=</span><span title="Integer" class="integer">10</span><span title="Space">
     </span><span title="Ident">paddingRight</span><span title="Operator">=</span><span title="Integer" class="integer">10</span><span title="Operator">}</span><span title="Operator">}</span><span title="Space">
 
-  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-x-axis tickCount=5}}</span><span title="Space">
+  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-x-axis tickCount=5 as |tick|}}</span><span title="Space">
     </span><span title="Operator">&lt;</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Operator">{</span><span title="Operator">{</span><span title="Ident">format</span><span title="Operator">-</span><span title="Ident">hour</span><span title="Operator">-</span><span title="Ident">minute</span><span title="Space"> </span><span title="Ident">tick</span><span title="Operator">.</span><span title="Ident">value</span><span title="Operator">}</span><span title="Operator">}</span><span title="Operator">&lt;</span><span title="Operator">/</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Space">
   </span><span title="Operator">{</span><span title="Operator">{</span><span title="Operator">/</span><span title="Ident">nf</span><span title="Operator">-</span><span title="Ident">x</span><span title="Operator">-</span><span title="Ident">axis</span><span title="Operator">}</span><span title="Operator">}</span><span title="Space">
 
-  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-y-axis}}</span><span title="Space">
+  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-y-axis as |tick|}}</span><span title="Space">
     </span><span title="Operator">&lt;</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Operator">{</span><span title="Operator">{</span><span title="Ident">tick</span><span title="Operator">.</span><span title="Ident">value</span><span title="Operator">}</span><span title="Operator">}</span><span title="Operator">&lt;</span><span title="Operator">/</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Space">
   </span><span title="Operator">{</span><span title="Operator">{</span><span title="Operator">/</span><span title="Ident">nf</span><span title="Operator">-</span><span title="Ident">y</span><span title="Operator">-</span><span title="Ident">axis</span><span title="Operator">}</span><span title="Operator">}</span><span title="Space">
 
@@ -115,7 +115,7 @@
     \{{#nf-x-axis}} draws the X Axis. tickCount=5 will produce approximately 5 evenly spaced "nice" ticks on the axis (the actual count may be one more or less depending where "nice" ticks fall on the axis). <text>{{format-hour-minute tick.value}}</text> is the X Axis tick template and defines the text that appears on each tick. tick.value is the domain value of each tick.
     </p>
   <p>
-    \{{#nf-y-axis}} draws the Y Axis and has a text template similar to nf-x-axis above.
+    \{{#nf-y-axis as |tick|}} draws the Y Axis and has a text template similar to nf-x-axis above.
   </p>
   <p>
     nf-graph child elements have built in mouse tracking features. Also child elements support being selected by clicking, or by setting a property.  Lines and areas provide a "hoverData" property which contains data about the data point nearest to the mouse pointer.
