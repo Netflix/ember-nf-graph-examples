@@ -6,11 +6,11 @@
     paddingTop=10
     paddingRight=10}}
 
-  {{#nf-x-axis tickCount=5}}
+  {{#nf-x-axis tickCount=5 as |tick|}}
     <text>{{format-hour-minute tick.value}}</text>
   {{/nf-x-axis}}
 
-  {{#nf-y-axis}}
+  {{#nf-y-axis as |tick|}}
     <text>{{tick.value}}</text>
   {{/nf-y-axis}}
 
@@ -64,11 +64,11 @@
     </span><span title="Ident">paddingTop</span><span title="Operator">=</span><span title="Integer" class="integer">10</span><span title="Space">
     </span><span title="Ident">paddingRight</span><span title="Operator">=</span><span title="Integer" class="integer">10</span><span title="Operator">}</span><span title="Operator">}</span><span title="Space">
 
-  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-x-axis tickCount=5}}</span><span title="Space">
+  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-x-axis tickCount=5 as |tick|}}</span><span title="Space">
     </span><span title="Operator">&lt;</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Operator">{</span><span title="Operator">{</span><span title="Ident">format</span><span title="Operator">-</span><span title="Ident">hour</span><span title="Operator">-</span><span title="Ident">minute</span><span title="Space"> </span><span title="Ident">tick</span><span title="Operator">.</span><span title="Ident">value</span><span title="Operator">}</span><span title="Operator">}</span><span title="Operator">&lt;</span><span title="Operator">/</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Space">
   </span><span title="Operator">{</span><span title="Operator">{</span><span title="Operator">/</span><span title="Ident">nf</span><span title="Operator">-</span><span title="Ident">x</span><span title="Operator">-</span><span title="Ident">axis</span><span title="Operator">}</span><span title="Operator">}</span><span title="Space">
 
-  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-y-axis}}</span><span title="Space">
+  </span><span title="Operator">{</span><span title="Operator">{</span><span title="Comment" class="comment">#nf-y-axis as |tick|}}</span><span title="Space">
     </span><span title="Operator">&lt;</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Operator">{</span><span title="Operator">{</span><span title="Ident">tick</span><span title="Operator">.</span><span title="Ident">value</span><span title="Operator">}</span><span title="Operator">}</span><span title="Operator">&lt;</span><span title="Operator">/</span><span title="Ident">text</span><span title="Operator">&gt;</span><span title="Space">
   </span><span title="Operator">{</span><span title="Operator">{</span><span title="Operator">/</span><span title="Ident">nf</span><span title="Operator">-</span><span title="Ident">y</span><span title="Operator">-</span><span title="Ident">axis</span><span title="Operator">}</span><span title="Operator">}</span><span title="Space">
 
